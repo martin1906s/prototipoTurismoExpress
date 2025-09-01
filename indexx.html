@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>TurismoExpress - App (Móvil)</title>
+
+  <!-- Estilos/Íconos -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    :root{
+      --primary:#1a73e8;
+      --primary-dark:#1e40af;
+      --muted:#64748b;
+      --bg:#f4f6f8;
+      --card:#fff;
+      --success:#10b981;
+      --danger:#ef4444;
+      --shadow: 0 8px 28px rgba(2,6,23,0.10);
+      --border:#e6eefc;
+    }
+    *{box-sizing:border-box;font-family:"Roboto",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#eef2f7)}
+    .phone-wrap{
+      min-height:100dvh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .phone{
+      width:100%;
+      max-width:420px;
+      background:var(--card);
+      border:1px solid #eef5ff;
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .notch{
+      position:absolute;top:0;left:50%;transform:translateX(-50%);
+      width:120px;height:18px;background:#0f172a12;border-radius:0 0 14px 14px;
+      z-index:2;
+    }
+    header.appbar{
+      background:linear-gradient(90deg,var(--primary),#3b82f6);
+      color:#fff;
+      padding:16px 18px;
+      font-size:1.05rem;
+      font-weight:600;
+      position:sticky;top:0;z-index:10;
+      display:flex;align-items:center;gap:10px;
+    }
+    .appbar .logo{
+      width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.18);
+      display:flex;align-items:center;justify-content:center;font-weight:700
+    }
+    .content{padding:16px}
+    .screen{display:none;animation:fadeIn .25s ease}
+    .screen.active{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .card{background:var(--card);border-radius:12px;padding:14px;border:1px solid var(--border);box-shadow:0 4px 16px rgba(11,22,40,0.03);margin-bottom:12px}
+    .card h4{margin:0 0 6px 0;color:var(--primary)}
+    .btn{width:100%;padding:12px;border-radius:10px;border:0;background:var(--primary);color:#fff;cursor:pointer;font-weight:600;transition:transform .15s ease,opacity .15s ease}
+    .btn:hover{transform:translateY(-1px);opacity:.95}
+    .btn.ghost{background:#fff;color:var(--primary-dark);border:1px solid var(--border)}
+    .btn.secondary{background:#e7efff;color:#0f172a}
+    .tag{display:inline-block;padding:6px 8px;border-radius:999px;font-size:.78rem;background:#f1f8ff;color:var(--primary)}
+    .small-muted{font-size:.9rem;color:var(--muted)}
+    ul{list-style:none;margin:0;padding:0}
+    li.option{
+      display:flex;align-items:center;gap:12px;
+      padding:12px;border:1px solid var(--border);border-radius:10px;
+      background:#f8fbff;cursor:pointer;margin-bottom:10px;
+      transition:box-shadow .15s ease,border-color .15s ease
+    }
+    li.option:hover{border-color:var(--primary)}
+    li.option.selected{background:#eaf3ff;border-color:var(--primary);box-shadow:0 6px 20px rgba(26,115,232,.12)}
+    li.option i{color:var(--primary)}
+    .qr{
+      width:200px;height:200px;margin:16px auto;border-radius:12px;
+      border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;background:#fff;
+      box-shadow:0 8px 20px rgba(26,115,232,.15)
+    }
+    .info{line-height:1.55;color:#0f172a}
+    .minimap{width:100%;height:220px;border-radius:12px;border:1px solid var(--border);margin:12px 0}
+    .itinerary h4{margin:8px 0 10px;color:var(--primary)}
+    .itinerary-item{background:#f8fbff;padding:12px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;position:relative;padding-left:36px;border:1px solid var(--border)}
+    .itinerary-item::before{content:'\f111';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;left:12px;color:var(--primary);font-size:.8em}
+    .itinerary-item:not(:last-child)::after{content:'';position:absolute;left:17px;top:30px;height:calc(100% + 10px);width:2px;background:var(--primary)}
+    .form-group{margin:12px 0}
+    .form-group label{display:block;margin-bottom:6px;font-weight:500;font-size:.95rem}
+    .form-group input,.form-group select{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:.95rem}
+    .form-group input:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,115,232,0.12)}
+    .payment-option,.activity-option,.hotel-option{
+      display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;margin-bottom:10px;border:1px solid var(--border);background:#f8fbff
+    }
+    .payment-option:hover,.activity-option:hover,.hotel-option:hover{border-color:var(--primary)}
+    .payment-option.selected,.activity-option.selected,.hotel-option.selected{background:#eaf3ff;border:2px solid var(--primary)}
+    .payment-option i,.activity-option i{color:var(--primary)}
+    .activity-option input[type="checkbox"],.hotel-option input[type="radio"]{width:20px;height:20px;accent-color:var(--primary)}
+    .total-price{font-size:1.1rem;font-weight:700;color:var(--primary);margin:10px 0}
+    .loader{border:3px solid #f3f3f3;border-top:3px solid var(--primary);border-radius:50%;width:24px;height:24px;animation:spin 1s linear infinite;margin:12px auto;display:none}
+    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    .carousel {
+      position: relative;
+      overflow: hidden;
+      max-width: 100%;
+      margin-bottom: 12px;
+    }
+    .carousel-slides {
+      display: flex;
+      transition: transform 0.5s ease;
+    }
+    .carousel-slide {
+      min-width: 100%;
+      box-sizing: border-box;
+    }
+    .carousel-slide img {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    .carousel-btn.prev { left: 10px; }
+    .carousel-btn.next { right: 10px; }
+    .carousel-dots {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .carousel-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #ccc;
+      border-radius: 50%;
+      margin: 0 5px;
+      cursor: pointer;
+    }
+    .carousel-dot.active { background: var(--primary); }
+    .bottom-nav{
+      position:sticky;bottom:0;z-index:10;background:#fff;border-top:1px solid var(--border);
+      display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px
+    }
+    .tab{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:10px;color:var(--muted);font-size:.85rem;border:1px solid transparent;background:transparent}
+    .tab.active{color:var(--primary-dark);background:linear-gradient(90deg,var(--primary)10%,rgba(26,115,232,0.06));border-color:#eaf3ff}
+    .tab i{font-size:1.1rem}
+    .back{display:inline-block;margin:12px 0;color:var(--primary);cursor:pointer;font-size:.95rem;font-weight:500}
+    .back:hover{text-decoration:underline}
+    .seat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px}
+    .seat{width:100%;padding:10px;text-align:center;border:1px solid var(--border);border-radius:8px;cursor:pointer}
+    .seat.available{background:#fff;color:var(--primary)}
+    .seat.selected{background:var(--primary);color:#fff}
+    .seat.occupied{background:var(--muted);color:#fff;cursor:not-allowed}
+    .profile-info{padding:10px}
+    .photo{width:100%;border-radius:8px;margin-bottom:8px}
+    .desc{line-height:1.4;margin-bottom:10px}
+    .terms-section{overflow-y:auto;max-height:300px;border:1px solid var(--border);padding:10px;border-radius:10px}
+  </style>
+</head>
+<body>
+  <div class="phone-wrap">
+    <div class="phone" id="app">
+      <div class="notch"></div>
+      <header class="appbar"><div class="logo">TE</div>TurismoExpress</header>
+      <div class="content">
+        <section class="screen active" id="login">
+          <div class="card">
+            <h4>Iniciar Sesión</h4>
+            <div class="form-group">
+              <label for="username">Usuario</label>
+              <input id="username" type="text" placeholder="Usuario" aria-label="Usuario"/>
+            </div>
+            <div class="form-group">
+              <label for="password">Contraseña</label>
+              <input id="password" type="password" placeholder="Contraseña" aria-label="Contraseña"/>
+            </div>
+            <button class="btn" onclick="login()">Ingresar</button>
+          </div>
+        </section>
+        <section class="screen" id="inicio">
+          <div class="card" style="text-align:center">
+            <h4>Explora Ecuador</h4>
+            <p class="small-muted">Reserva tu aventura con facilidad</p>
+            <div style="height:8px"></div>
+            <button class="btn" onclick="goTo('alquiler')"><i class="fas fa-bus"></i> &nbsp;Alquilar un Bus</button>
+            <button class="btn ghost" onclick="fetchPaquetes()"><i class="fas fa-suitcase-rolling"></i> &nbsp;Paquete Turístico</button>
+          </div>
+          <div class="card">
+            <h4>Mis accesos</h4>
+            <p class="small-muted">Guarda o muestra tus QR de reservas rápidamente.</p>
+            <div style="display:flex;gap:10px">
+              <button class="btn secondary" onclick="goTo('confirmar-alquiler')"><i class="fas fa-qrcode"></i> &nbsp;QR Bus</button>
+              <button class="btn secondary" onclick="goTo('confirmar-paquete')"><i class="fas fa-qrcode"></i> &nbsp;QR Paquete</button>
+            </div>
+          </div>
+        </section>
+        <section class="screen" id="alquiler">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card">
+            <h4>Elige Punto de Entrega</h4>
+            <ul>
+              <li class="option" onclick="select(this, 'bus', 'Terminal Carcelén, Quito', 'terminos-alquiler')"><i class="fas fa-bus"></i> <span>Terminal Carcelén, Quito</span></li>
+              <li class="option" onclick="select(this, 'bus', 'Oficina TurismoExpress, Guayaquil', 'terminos-alquiler')"><i class="fas fa-building"></i> <span>Oficina TurismoExpress, Guayaquil</span></li>
+              <li class="option" onclick="select(this, 'bus', 'Terminal Quitumbe, Quito', 'terminos-alquiler')"><i class="fas fa-warehouse"></i> <span>Terminal Quitumbe, Quito</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Detalles del Bus</h4>
+            <img src="https://thumbs.dreamstime.com/b/interior-de-lujo-del-autob%C3%BAs-con-los-asientos-c%C3%B3modos-124085134.jpg" class="photo" />
+            <p class="desc">Disfruta de un viaje cómodo en nuestro bus de lujo con aire acondicionado, WiFi, asientos reclinables y más. ¡La mejor forma de explorar Ecuador!</p>
+            <ul>
+              <li><i class="fas fa-wind"></i> Aire Acondicionado</li>
+              <li><i class="fas fa-wifi"></i> WiFi Gratuito</li>
+              <li><i class="fas fa-tv"></i> TV a Bordo</li>
+              <li><i class="fas fa-restroom"></i> Baño</li>
+            </ul>
+          </div>
+        </section>
+        <section class="screen" id="terminos-alquiler">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card">
+            <h4>Términos y Condiciones</h4>
+            <div class="terms-section">
+              <p><strong>Acuerdo de Alquiler de Bus</strong></p>
+              <p>El cliente se compromete a devolver el bus alquilado en las condiciones iniciales y en el punto de entrega acordado antes de las 6:00 PM del día de finalización. Cualquier daño o retraso incurrirá en una multa del 20% del precio total. TurismoExpress no se hace responsable por uso indebido o accidentes fuera de las rutas autorizadas.</p>
+              <p>El coordinador validará el estado del bus al inicio y finalización del alquiler. Firma del cliente requerida para confirmar la devolución.</p>
+            </div>
+            <button class="btn" id="accept-terms-btn" onclick="acceptTerms()">Aceptar Términos y Continuar</button>
+          </div>
+        </section>
+        <section class="screen" id="paquete">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card"><h4>Elige tu Destino</h4></div>
+          <div class="loader" id="paquetes-loader"></div>
+          <div id="paquetes-list"></div>
+        </section>
+        <section class="screen" id="paquete-actividades">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card" id="actividades-info"></div>
+          <div id="actividades-list"></div>
+          <p class="total-price">Total: $<span id="total-price">0</span></p>
+          <button class="btn" onclick="goTo('paquete-recogida')">Continuar</button>
+        </section>
+        <section class="screen" id="paquete-recogida">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card">
+            <h4>¿Desde dónde inicia el tour?</h4>
+            <ul>
+              <li class="option" onclick="select(this, 'paquete', 'Hotel Dann Carlton, Quito', 'paquete-opciones')"><i class="fas fa-hotel"></i> <span>Hotel Dann Carlton, Quito</span></li>
+              <li class="option" onclick="select(this, 'paquete', 'Aeropuerto Mariscal Sucre, Quito', 'paquete-opciones')"><i class="fas fa-plane"></i> <span>Aeropuerto Mariscal Sucre, Quito</span></li>
+              <li class="option" onclick="select(this, 'paquete', 'Oficina TurismoExpress, Guayaquil', 'paquete-opciones')"><i class="fas fa-building"></i> <span>Oficina TurismoExpress, Guayaquil</span></li>
+            </ul>
+          </div>
+        </section>
+        <section class="screen" id="paquete-opciones">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card" id="hotel-info">
+            <h4>Opciones de Alojamiento</h4>
+            <p><strong>Destino:</strong> <span id="hotel-destino"></span></p>
+            <p><strong>Punto de Salida:</strong> <span id="hotel-recogida"></span></p>
+          </div>
+          <div class="card" id="hotel-list">
+            <div class="hotel-option">
+              <input type="radio" name="hotel" id="hotel-none" value="none" onchange="updateTotalPriceHotel()" checked aria-label="Sin hotel">
+              <label for="hotel-none">Sin hotel ($0.00)</label>
+            </div>
+            <div class="hotel-option">
+              <input type="radio" name="hotel" id="hotel-only" value="only" onchange="updateTotalPriceHotel()" aria-label="Solo hotel">
+              <label for="hotel-only">Solo hotel ($30.00) - Disfruta de un alojamiento cómodo y moderno con vistas impresionantes.</label>
+            </div>
+            <div class="hotel-option">
+              <input type="radio" name="hotel" id="hotel-breakfast" value="breakfast" onchange="updateTotalPriceHotel()" aria-label="Hotel con desayuno">
+              <label for="hotel-breakfast">Hotel con desayuno ($50.00) - Incluye desayuno buffet para empezar el día con energía.</label>
+            </div>
+          </div>
+          <div class="card">
+            <h4>Selecciona Asientos</h4>
+            <div class="seat-grid" id="seat-grid"></div>
+            <p class="total-price">Asientos Seleccionados: <span id="selected-seats-count">0</span></p>
+          </div>
+          <p class="total-price">Total: $<span id="total-price-hotel">0</span></p>
+          <button class="btn" onclick="goTo('pago')">Continuar</button>
+        </section>
+        <section class="screen" id="pago">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card" id="pago-info"></div>
+          <div class="payment-option" onclick="selectPayment(this, 'tarjeta')">
+            <i class="fas fa-credit-card"></i><p>Tarjeta de Crédito/Débito</p>
+          </div>
+          <div class="payment-option" onclick="selectPayment(this, 'paypal')">
+            <i class="fab fa-paypal"></i><p>PayPal</p>
+          </div>
+          <div id="payment-form" class="card" style="display:none">
+            <div class="form-group">
+              <label id="payment-label">Datos de Pago</label>
+              <input type="text" id="payment-input" placeholder="Ej: 1234 5678 9012 3456" aria-label="Datos de pago">
+            </div>
+            <div class="loader" id="payment-loader"></div>
+            <button class="btn" onclick="confirmPayment()">Confirmar Pago</button>
+          </div>
+        </section>
+        <section class="screen" id="confirmar-alquiler">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card info">
+            <h4><i class="fas fa-check-circle" style="color:var(--success)"></i> &nbsp;Reserva Confirmada</h4>
+            <p>Reserva de paquete turístico:</p>
+            <p><strong>Destino:</strong> <span id="destino"></span></p>
+            <p><strong>Punto de Salida:</strong> <span id="recogida"></span></p>
+            <p><strong>Asientos Seleccionados:</strong> <span id="selected-seats"></span></p>
+            <p><strong>Actividades:</strong> <span id="actividades">Ninguna</span></p>
+            <p><strong>Alojamiento:</strong> <span id="alojamiento">Ninguno</span></p>
+            <p><strong>Precio Total:</strong> $<span id="precio-paquete">0</span></p>
+            <p><strong>Horario de Salida:</strong> 07:30 AM</p>
+          </div>
+          <div id="qr-alquiler" class="qr"></div>
+          <p class="small-muted" style="text-align:center">Muestra este código al recoger el bus</p>
+          <button class="btn ghost" onclick="goTo('inicio')">Volver al Inicio</button>
+        </section>
+        <section class="screen" id="confirmar-paquete">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card info">
+            <h4><i class="fas fa-suitcase-rolling"></i> &nbsp;¡Tour Confirmado!</h4>
+            <p>Reserva de paquete turístico:</p>
+            <p><strong>Destino:</strong> <span id="destino"></span></p>
+            <p><strong>Punto de Salida:</strong> <span id="recogida"></span></p>
+            <p><strong>Asientos Seleccionados:</strong> <span id="selected-seats"></span></p>
+            <p><strong>Actividades:</strong> <span id="actividades">Ninguna</span></p>
+            <p><strong>Alojamiento:</strong> <span id="alojamiento">Ninguno</span></p>
+            <p><strong>Precio Total:</strong> $<span id="precio-paquete">0</span></p>
+            <p><strong>Horario de Salida:</strong> 07:30 AM</p>
+          </div>
+          <div id="minimap" class="minimap"></div>
+          <div class="itinerary" id="itinerario"><h4><i class="fas fa-route"></i> Itinerario</h4></div>
+          <div id="qr-paquete" class="qr"></div>
+          <p class="small-muted" style="text-align:center">Presenta este código en el punto de salida</p>
+          <button class="btn ghost" onclick="goTo('inicio')">Volver al Inicio</button>
+        </section>
+        <section class="screen" id="perfil">
+          <div class="card">
+            <h4>Perfil de Usuario</h4>
+            <p><strong>Nombre:</strong> <span id="profile-name">Usuario Ejemplo</span></p>
+            <p><strong>Email:</strong> <span id="profile-email">ejemplo@turismoexpress.com</span></p>
+            <p><strong>Reservas Activas:</strong> 2</p>
+            <button class="btn danger" onclick="logout()">Cerrar Sesión</button>
+          </div>
+        </section>
+      </div>
+      <nav class="bottom-nav">
+        <button class="tab" data-tab="inicio" onclick="goTo('inicio', true)"><i class="fas fa-home"></i><span>Inicio</span></button>
+        <button class="tab" data-tab="alquiler" onclick="goTo('alquiler')"><i class="fas fa-bus"></i><span>Alquiler</span></button>
+        <button class="tab" data-tab="paquete" onclick="fetchPaquetes()"><i class="fas fa-suitcase-rolling"></i><span>Paquetes</span></button>
+        <button class="tab" data-tab="perfil" onclick="goTo('perfil')"><i class="fas fa-user"></i><span>Perfil</span></button>
+      </nav>
+    </div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let currentScreen = 'login';
+    let selectedSeats = [];
+
+    // Check if QRCode library is loaded
+    window.addEventListener('load', () => {
+      if (typeof QRCode === 'undefined') {
+        console.error('QRCode library not loaded');
+        alert('No se pudo cargar la librería de QR. Por favor, intenta de nuevo.');
+      } else {
+        console.log('QRCode library loaded successfully');
+      }
+      goTo('login');
+    });
+
+    function goTo(screenId, force = false) {
+      if (!force && currentScreen === screenId) return;
+      document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.opacity = '0'; });
+      const targetScreen = document.getElementById(screenId);
+      if (!targetScreen) return;
+      targetScreen.classList.add('active');
+      setTimeout(() => { targetScreen.style.opacity = '1'; }, 10);
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      const tab = document.querySelector(`.tab[data-tab="${screenId}"]`);
+      if (tab) tab.classList.add('active');
+      currentScreen = screenId;
+
+      if (screenId === 'paquete-opciones') initSeatGrid();
+      if (screenId === 'paquete') fetchPaquetes();
+    }
+
+    function goBack() {
+      if (currentScreen === 'login') return;
+      const prevScreen = {
+        'terminos-alquiler': 'alquiler',
+        'paquete': 'inicio',
+        'paquete-actividades': 'paquete',
+        'paquete-recogida': 'paquete-actividades',
+        'paquete-opciones': 'paquete-recogida',
+        'pago': 'paquete-opciones',
+        'confirmar-alquiler': 'pago',
+        'confirmar-paquete': 'pago',
+        'perfil': 'inicio',
+        'alquiler': 'inicio'
+      }[currentScreen] || 'inicio';
+      goTo(prevScreen);
+    }
+
+    function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      if (username === 'cliente' && password === 'cliente123') {
+        goTo('inicio');
+      } else {
+        alert('Credenciales incorrectas');
+      }
+    }
+
+    function logout() {
+      goTo('login');
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+    }
+
+    function initSeatGrid() {
+      const seatGrid = document.getElementById('seat-grid');
+      seatGrid.innerHTML = '';
+      for (let i = 1; i <= 40; i++) {
+        const seat = document.createElement('div');
+        seat.className = 'seat ' + (Math.random() > 0.3 ? 'available' : 'occupied');
+        seat.textContent = i;
+        seat.onclick = () => {
+          if (seat.classList.contains('available') && !seat.classList.contains('selected')) {
+            seat.classList.add('selected');
+            selectedSeats.push(i);
+          } else if (seat.classList.contains('selected')) {
+            seat.classList.remove('selected');
+            selectedSeats = selectedSeats.filter(s => s !== i);
+          }
+          document.getElementById('selected-seats-count').textContent = selectedSeats.length;
+        };
+        seatGrid.appendChild(seat);
+      }
+    }
+
+    function acceptTerms() {
+      const termsAccepted = confirm('¿Aceptas los términos y condiciones para el alquiler del bus?');
+      if (termsAccepted) {
+        goTo('pago');
+      } else {
+        alert('Debes aceptar los términos para continuar.');
+      }
+    }
+
+    function fetchPaquetes() {
+      goTo('paquete');
+      const loader = document.getElementById('paquetes-loader');
+      const list = document.getElementById('paquetes-list');
+      loader.style.display = 'block';
+      list.innerHTML = '';
+
+      setTimeout(() => {
+        loader.style.display = 'none';
+        const paquetes = [
+          { id: 'quilotoa', nombre: 'Laguna Quilotoa', precio: 120, descripcion: 'Explora la belleza de la laguna de Quilotoa con caminatas y paisajes únicos.' },
+          { id: 'banos', nombre: 'Baños de Agua Santa', precio: 150, descripcion: 'Disfruta de cascadas, aventura y aguas termales en Baños.' },
+          { id: 'mitad', nombre: 'Mitad del Mundo', precio: 80, descripcion: 'Visita el monumento ecuatoriano y vive la experiencia de estar en dos hemisferios.' }
+        ];
+        paquetes.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <h4>${p.nombre}</h4>
+            <div class="carousel">
+              <div class="carousel-slides" id="carousel-${p.id}">
+                ${p.id === 'quilotoa' ? `
+                  <div class="carousel-slide"><img src="https://www.camepe.com/wp-content/uploads/2021/04/quilotoa-3.jpg" alt="${p.nombre} 1"></div>
+                  <div class="carousel-slide"><img src="https://ame.gob.ec/wp-content/uploads/2025/05/WhatsApp-Image-2025-05-01-at-15.52.42.jpeg" alt="${p.nombre} 2"></div>
+                  <div class="carousel-slide"><img src="https://www.latintrails.com/wp-content/uploads/2021/12/Quilotoa.jpg" alt="${p.nombre} 3"></div>
+                ` : ''}
+                ${p.id === 'banos' ? `
+                  <div class="carousel slide"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROE4qmZDoGWT3uvtuIHU4Sz8alRgBgFwe2ZQ&s" alt="${p.nombre} 1"></div>
+                  <div class="carousel-slide"><img src="https://repositorio.ame.gob.ec/wp-content/uploads/2021/03/WhatsApp-Image-2021-03-25-at-15.54.27.jpeg" alt="${p.nombre} 2"></div>
+                  <div class="carousel-slide"><img src="https://www.ivagatoursbanios.com/images/turismo-bans.webp" alt="${p.nombre} 3"></div>
+                ` : ''}
+                ${p.id === 'mitad' ? `
+                  <div class="carousel-slide"><img src="https://cloudfront-us-east-1.images.arcpublishing.com/infobae/QTWJJLKURRHIDFR7UYQFFNHNRQ.jpeg" alt="${p.nombre} 1"></div>
+                  <div class="carousel-slide"><img src="https://ecuadoralmundo.com/wp-content/uploads/2023/05/mitad-del-mundo-2.webp" alt="${p.nombre} 2"></div>
+                  <div class="carousel-slide"><img src="https://museosdmqjennifermeza.wordpress.com/wp-content/uploads/2015/05/images-61.jpeg" alt="${p.nombre} 3"></div>
+                ` : ''}
+              </div>
+              <button class="carousel-btn prev" onclick="moveCarousel('prev', '${p.id}')"><i class="fas fa-chevron-left"></i></button>
+              <button class="carousel-btn next" onclick="moveCarousel('next', '${p.id}')"><i class="fas fa-chevron-right"></i></button>
+              <div class="carousel-dots" id="dots-${p.id}"></div>
+            </div>
+            <p class="small-muted">${p.descripcion}</p>
+            <p class="total-price">Precio: $${p.precio}</p>
+            <button class="btn" onclick="selectPaquete('${p.id}', '${p.nombre}', ${p.precio})">Seleccionar</button>
+          `;
+          list.appendChild(div);
+
+          const slides = document.getElementById(`carousel-${p.id}`).children;
+          const dotsContainer = document.getElementById(`dots-${p.id}`);
+          for (let i = 0; i < slides.length; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'carousel-dot';
+            dot.onclick = () => moveToSlide(i, p.id);
+            if (i === 0) dot.classList.add('active');
+            dotsContainer.appendChild(dot);
+          }
+        });
+      }, 1000);
+    }
+
+    let currentSlide = {};
+    function moveCarousel(direction, paqueteId) {
+      const slides = document.getElementById(`carousel-${paqueteId}`).children;
+      const dots = document.getElementById(`dots-${paqueteId}`).children;
+      currentSlide[paqueteId] = currentSlide[paqueteId] || 0;
+      if (direction === 'next') {
+        currentSlide[paqueteId] = (currentSlide[paqueteId] + 1) % slides.length;
+      } else {
+        currentSlide[paqueteId] = (currentSlide[paqueteId] - 1 + slides.length) % slides.length;
+      }
+      document.getElementById(`carousel-${paqueteId}`).style.transform = `translateX(-${currentSlide[paqueteId] * 100}%)`;
+      Array.from(dots).forEach((dot, index) => dot.classList.toggle('active', index === currentSlide[paqueteId]));
+    }
+
+    function moveToSlide(index, paqueteId) {
+      const slides = document.getElementById(`carousel-${paqueteId}`).children;
+      const dots = document.getElementById(`dots-${paqueteId}`).children;
+      currentSlide[paqueteId] = index;
+      document.getElementById(`carousel-${paqueteId}`).style.transform = `translateX(-${currentSlide[paqueteId] * 100}%)`;
+      Array.from(dots).forEach((dot, i) => dot.classList.toggle('active', i === index));
+    }
+
+    function selectPaquete(id, nombre, precio) {
+      localStorage.setItem('selected-paquete', JSON.stringify({ id, nombre, precio }));
+      document.getElementById('hotel-destino').textContent = nombre;
+      goTo('paquete-actividades');
+      const info = document.getElementById('actividades-info');
+      info.innerHTML = `<h4>${nombre}</h4><p class="small-muted">Selecciona tus actividades opcionales.</p>`;
+      const list = document.getElementById('actividades-list');
+      list.innerHTML = `
+        <div class="activity-option">
+          <input type="checkbox" id="act1" onchange="updateTotalPrice()" aria-label="Caminata">
+          <label for="act1">Caminata ($20.00)</label>
+        </div>
+        <div class="activity-option">
+          <input type="checkbox" id="act2" onchange="updateTotalPrice()" aria-label="Kayak">
+          <label for="act2">Kayak ($30.00)</label>
+        </div>
+      `;
+    }
+
+    function updateTotalPrice() {
+      const act1 = document.getElementById('act1').checked ? 20 : 0;
+      const act2 = document.getElementById('act2').checked ? 30 : 0;
+      const total = act1 + act2;
+      document.getElementById('total-price').textContent = total;
+    }
+
+    function updateTotalPriceHotel() {
+      const hotel = document.querySelector('input[name="hotel"]:checked').value;
+      const basePrice = JSON.parse(localStorage.getItem('selected-paquete')).precio;
+      const activitiesPrice = parseInt(document.getElementById('total-price').textContent) || 0;
+      const hotelPrice = { 'none': 0, 'only': 30, 'breakfast': 50 }[hotel];
+      document.getElementById('total-price-hotel').textContent = basePrice + activitiesPrice + hotelPrice;
+    }
+
+    function select(thisElement, type, value, nextScreen) {
+      thisElement.classList.add('selected');
+      document.querySelectorAll(`#${currentScreen} .option`).forEach(el => {
+        if (el !== thisElement) el.classList.remove('selected');
+      });
+      localStorage.setItem('selected-' + type, value);
+      if (type === 'paquete') {
+        document.getElementById('hotel-recogida').textContent = value;
+      }
+      goTo(nextScreen);
+    }
+
+    function selectPayment(thisElement, method) {
+      thisElement.classList.add('selected');
+      document.querySelectorAll('#pago .payment-option').forEach(el => {
+        if (el !== thisElement) el.classList.remove('selected');
+      });
+      const form = document.getElementById('payment-form');
+      const label = document.getElementById('payment-label');
+      const input = document.getElementById('payment-input');
+      form.style.display = 'block';
+      label.textContent = method === 'tarjeta' ? 'Número de Tarjeta' : 'Correo de PayPal';
+      input.placeholder = method === 'tarjeta' ? 'Ej: 1234 5678 9012 3456' : 'Ej: usuario@paypal.com';
+      localStorage.setItem('payment-method', method);
+    }
+
+    function confirmPayment() {
+      const loader = document.getElementById('payment-loader');
+      const input = document.getElementById('payment-input').value;
+      if (!input) {
+        alert('Por favor, ingresa los datos de pago.');
+        return;
+      }
+      loader.style.display = 'block';
+      setTimeout(() => {
+        loader.style.display = 'none';
+        const method = localStorage.getItem('payment-method');
+        // Clear previous QR code containers
+        document.getElementById('qr-alquiler').innerHTML = '';
+        document.getElementById('qr-paquete').innerHTML = '';
+        if (localStorage.getItem('selected-bus')) {
+          goTo('confirmar-alquiler');
+          document.getElementById('punto-entrega').textContent = localStorage.getItem('selected-bus');
+          try {
+            new QRCode(document.getElementById('qr-alquiler'), {
+              text: 'BUS-' + Date.now(),
+              width: 180,
+              height: 180,
+              colorDark: '#1a73e8',
+              colorLight: '#ffffff'
+            });
+            console.log('QR code generated for bus rental');
+          } catch (error) {
+            console.error('Error generating QR code for bus:', error);
+            alert('Error al generar el código QR para el alquiler de bus.');
+          }
+        } else {
+          const paquete = JSON.parse(localStorage.getItem('selected-paquete'));
+          goTo('confirmar-paquete');
+          document.getElementById('destino').textContent = paquete.nombre;
+          document.getElementById('recogida').textContent = localStorage.getItem('selected-paquete');
+          document.getElementById('selected-seats').textContent = selectedSeats.join(', ') || 'Ninguno';
+          document.getElementById('actividades').textContent = Array.from(document.querySelectorAll('#actividades-list input:checked'))
+            .map(cb => cb.nextElementSibling.textContent.split('($')[0]).join(', ') || 'Ninguna';
+          document.getElementById('alojamiento').textContent = document.querySelector('input[name="hotel"]:checked').nextElementSibling.textContent.split('($')[0];
+          document.getElementById('precio-paquete').textContent = document.getElementById('total-price-hotel').textContent;
+          try {
+            new QRCode(document.getElementById('qr-paquete'), {
+              text: 'TOUR-' + Date.now(),
+              width: 180,
+              height: 180,
+              colorDark: '#1a73e8',
+              colorLight: '#ffffff'
+            });
+            console.log('QR code generated for tour package');
+          } catch (error) {
+            console.error('Error generating QR code for tour:', error);
+            alert('Error al generar el código QR para el paquete turístico.');
+          }
+          const minimap = L.map('minimap').setView([-0.180653, -78.467834], 10);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(minimap);
+          L.marker([-0.180653, -78.467834]).addTo(minimap).bindPopup('Punto de Salida');
+        }
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

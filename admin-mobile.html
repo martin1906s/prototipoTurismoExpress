@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>TurismoExpress - Admin (Móvil)</title>
+
+  <!-- Estilos/Íconos -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+  <style>
+    /* ====== Tema compartido ====== */
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1e40af;
+      --muted: #64748b;
+      --bg: #f4f6f8;
+      --card: #fff;
+      --success: #10b981;
+      --danger: #ef4444;
+      --shadow: 0 8px 28px rgba(2,6,23,0.10);
+      --border: #e6eefc;
+    }
+    * { box-sizing: border-box; font-family: "Roboto", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    html, body { height: 100%; margin: 0; background: linear-gradient(180deg, var(--bg), #eef2f7); }
+    .phone-wrap {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .phone {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid #eef5ff;
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .notch {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 18px; background: #0f172a12; border-radius: 0 0 14px 14px;
+      z-index: 2;
+    }
+    header.appbar {
+      background: linear-gradient(90deg, var(--primary), #3b82f6);
+      color: #fff;
+      padding: 16px 18px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .appbar .logo {
+      width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .content { padding: 16px; }
+    .screen { display: none; animation: fadeIn .25s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .card {
+      background: var(--card); border-radius: 12px; padding: 14px; border: 1px solid var(--border);
+      box-shadow: 0 4px 16px rgba(11,22,40,0.03); margin-bottom: 12px;
+    }
+    .card h4 { margin: 0 0 6px 0; color: var(--primary); }
+    .btn {
+      width: 100%; padding: 12px; border-radius: 10px; border: 0; background: var(--primary);
+      color: #fff; cursor: pointer; font-weight: 600; transition: transform .15s ease, opacity .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); opacity: .95; }
+    .btn.ghost { background: #fff; color: var(--primary-dark); border: 1px solid var(--border); }
+    .btn.warn { background: #f59e0b; }
+    .btn.danger { background: var(--danger); }
+    .tag {
+      display: inline-block; padding: 6px 8px; border-radius: 999px; font-size: .78rem;
+      background: #f1f8ff; color: var(--primary);
+    }
+    .small-muted { font-size: .9rem; color: var(--muted); }
+    .form-group { margin: 12px 0; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: .95rem; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; font-size: .95rem;
+    }
+
+    .seat.occupied:hover::after {
+  content: attr(title);
+  position: absolute;
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  z-index: 10;
+  transform: translateY(-100%);
+}
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,0.12);
+    }
+    .reservations { display: flex; flex-direction: column; gap: 12px; }
+    .reservation {
+      padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #f8fbff;
+    }
+    .reservation .meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .reservation .type { font-weight: 700; color: var(--primary-dark); }
+    .reservation .price { font-weight: 700; }
+    .reservation .actions { display: flex; gap: 8px; margin-top: 10px; }
+    .minimap { height: 160px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+    .qr-scanner { width: 100%; height: 260px; border-radius: 10px; background: #000; display: block; object-fit: cover; }
+    .qr-result { padding: 10px; border-radius: 8px; margin-top: 8px; }
+    .qr-result.success { background: linear-gradient(90deg, #ecfdf5, #f0fff7); border: 1px solid var(--success); color: var(--primary-dark); }
+    .qr-result.error { background: linear-gradient(90deg, #fff4f4, #fff8f8); border: 1px solid var(--danger); }
+    .controls { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search, .filter { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+    .form-row { display: flex; gap: 8px; }
+    .form-row > * { flex: 1; }
+    .checkbox-group { display: flex; flex-direction: column; gap: 4px; }
+    .seat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; }
+    .seat {
+      width: 100%; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 8px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .seat.available { background: #fff; color: var(--primary); }
+    .seat.selected { background: var(--primary); color: #fff; }
+    .seat.occupied { background: var(--muted); color: #fff; cursor: not-allowed; }
+    .terms-section { overflow-y: auto; max-height: 300px; border: 1px solid var(--border); padding: 10px; border-radius: 10px; }
+    .user-list { display: flex; flex-direction: column; gap: 12px; }
+    .user-item { padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #f8fbff; }
+    .bottom-nav {
+      position: sticky; bottom: 0; z-index: 10; background: #fff; border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px;
+    }
+    .tab {
+      display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; border-radius: 10px;
+      color: var(--muted); font-size: .85rem; border: 1px solid transparent; background: transparent;
+    }
+    .tab.active { color: var(--primary-dark); background: linear-gradient(90deg, var(--primary) 10%, rgba(26,115,232,0.06)); border-color: #eaf3ff; }
+    .tab i { font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="notch"></div>
+      <header class="appbar"><div class="logo">TE</div>TurismoExpress - Admin</header>
+      <div class="content">
+        <section id="login" class="screen active">
+          <div class="card">
+            <h4>Iniciar Sesión</h4>
+            <div class="form-group">
+              <label for="username">Usuario</label>
+              <input id="username" type="text" placeholder="Usuario" aria-label="Usuario"/>
+            </div>
+            <div class="form-group">
+              <label for="password">Contraseña</label>
+              <input id="password" type="password" placeholder="Contraseña" aria-label="Contraseña"/>
+            </div>
+            <button class="btn" onclick="login()">Ingresar</button>
+          </div>
+        </section>
+        <section id="admin" class="screen">
+          <div class="card">
+            <h4>Perfil de Administrador</h4>
+            <p><strong>Nombre:</strong> <span id="profile-name">Admin Ejemplo</span></p>
+            <p><strong>Email:</strong> <span id="profile-email">admin@turismoexpress.com</span></p>
+            <p><strong>Reservas Activas:</strong> <span id="active-reservations">0</span></p>
+            <button class="btn danger" onclick="logout()">Cerrar Sesión</button>
+          </div>
+        </section>
+        <section id="reservas" class="screen">
+          <div class="controls">
+            <input id="search-input" class="search" placeholder="Buscar por código, destino o punto" aria-label="Buscar reservas"/>
+            <select id="filter-type" class="filter" aria-label="Filtrar por tipo">
+              <option value="all">Todas</option>
+              <option value="bus">Alquiler de Bus</option>
+              <option value="paquete">Paquete Turístico</option>
+            </select>
+          </div>
+          <div class="card">
+            <h4>Estadísticas</h4>
+            <p id="stats-summary" class="small-muted">Cargando...</p>
+          </div>
+          <!-- <button class="btn" onclick="toggleNewReservationForm()">Nueva Reserva</button>
+          <div id="new-reservation-form" class="card" style="display:none">
+            <h4>Crear Nueva Reserva</h4>
+            <div class="form-group">
+              <label for="reserva-tipo">Tipo de Reserva</label>
+              <select id="reserva-tipo" aria-label="Tipo de reserva" onchange="updateReservationForm()">
+                <option value="bus">Alquiler de Bus</option>
+                <option value="paquete">Paquete Turístico</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reserva-paquete">Seleccionar Paquete</label>
+              <select id="reserva-paquete" aria-label="Seleccionar paquete">
+                <option value="">-- Selecciona un paquete --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reserva-codigo">Código QR</label>
+              <input id="reserva-codigo" type="text" placeholder="Ej: TOUR-1234" aria-label="Código QR"/>
+            </div>
+            <div class="form-group">
+              <label for="reserva-precio">Precio (USD)</label>
+              <input id="reserva-precio" type="number" step="0.01" placeholder="Ej: 200.00" aria-label="Precio"/>
+            </div>
+            <div id="reserva-bus-details" style="display:none">
+              <div class="form-group">
+                <label for="reserva-punto-entrega">Punto de Entrega</label>
+                <input id="reserva-punto-entrega" type="text" placeholder="Ej: Terminal Carcelén, Quito" aria-label="Punto de entrega"/>
+              </div>
+              <div class="form-group">
+                <label for="reserva-horario">Horario</label>
+                <input id="reserva-horario" type="time" aria-label="Horario"/>
+              </div>
+            </div>
+            <div id="reserva-paquete-details" style="display:none">
+              <div class="form-group">
+                <label for="reserva-destino">Destino</label>
+                <input id="reserva-destino" type="text" placeholder="Ej: Laguna Quilotoa" aria-label="Destino"/>
+              </div>
+              <div class="form-group">
+                <label for="reserva-recogida">Punto de Recogida</label>
+                <input id="reserva-recogida" type="text" placeholder="Ej: Hotel Dann Carlton, Quito" aria-label="Punto de recogida"/>
+              </div>
+              <div class="form-group">
+                <label for="reserva-actividades">Actividades (separadas por comas)</label>
+                <input id="reserva-actividades" type="text" placeholder="Ej: Caminata, Kayak" aria-label="Actividades"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn" onclick="createReservation()">Guardar Reserva</button>
+              <button class="btn ghost" onclick="toggleNewReservationForm()">Cancelar</button>
+            </div>
+          </div> -->
+          <div class="reservations" id="reservations-list" aria-live="polite"></div>
+        </section>
+        <section id="validar-qr" class="screen">
+          <div class="card">
+            <h4><i class="fas fa-qrcode"></i> Validar Código QR</h4>
+            <p class="small-muted">Usa la cámara o ingresa el código manualmente.</p>
+            <video id="qr-scanner" class="qr-scanner" autoplay muted playsinline></video>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input id="qr-code-manual" type="text" placeholder="Ej: TOUR-7890" aria-label="Código QR manual"/>
+              <button class="btn" id="btn-start-qr" onclick="startQRScanner()">Iniciar</button>
+              <button class="btn ghost" id="btn-stop-qr" onclick="stopQRScanner()" style="display:none">Detener</button>
+            </div>
+            <div id="qr-result" class="qr-result" aria-live="polite" style="display:none"></div>
+            <div id="qr-details" style="display:none;margin-top:12px">
+              <div id="minimap-qr" class="minimap"></div>
+              <div id="qr-details-content"></div>
+            </div>
+          </div>
+        </section>
+        <section id="coordinador" class="screen">
+          <div class="card">
+            <h4>Panel del Coordinador</h4>
+            <p><strong>Nombre:</strong> <span id="coordinator-name">Coordinador Ejemplo</span></p>
+            <p><strong>Ruta Actual:</strong> <span id="current-route">Monitoreando...</span></p>
+            <div class="card">
+              <h4>Gestión de Asientos - Paquete Turístico</h4>
+              <div class="form-group">
+                <label for="select-reserva">Seleccionar Reserva de Paquete Turístico</label>
+                <select id="select-reserva" aria-label="Seleccionar reserva" onchange="loadSeats()">
+                  <option value="">-- Selecciona --</option>
+                </select>
+              </div>
+              <div class="seat-grid" id="seat-grid"></div>
+              <button class="btn" onclick="loadSeats()">Actualizar Asientos</button>
+            </div>
+            <div class="card">
+              <h4>Monitoreo de Ruta</h4>
+              <div id="route-map" class="minimap"></div>
+              <p class="small-muted" id="route-status">Bus en movimiento...</p>
+            </div>
+            <div class="card">
+              <h4>Términos y Condiciones</h4>
+              <div class="terms-section">
+                <p><strong>Acuerdo de Alquiler de Bus</strong></p>
+                <p>Por favor, cargue el archivo PDF del contrato o los términos y condiciones.</p>
+                <div class="form-group">
+                  <label for="file-upload">Cargar archivo PDF</label>
+                  <input type="file" id="file-upload" accept=".pdf" aria-label="Cargar PDF"/>
+                  <button class="btn ghost" onclick="uploadTermsPDF()">Cargar</button>
+                </div>
+                <div id="terms-pdf-view" style="display:none">
+                  <p>Archivo cargado: <a id="terms-pdf-link" href="#" target="_blank">Ver PDF</a></p>
+                </div>
+                <p><strong>Condiciones:</strong></p>
+                <p>El cliente se compromete a devolver el bus alquilado en las condiciones iniciales y en el punto de entrega acordado (Terminal Carcelén, Quito) antes de las 6:00 PM del día de finalización. Cualquier daño o retraso incurrirá en una multa del 20% del precio total. TurismoExpress no se hace responsable por uso indebido o accidentes fuera de las rutas autorizadas.</p>
+                <p>El coordinador debe validar el estado del bus al inicio y finalización del alquiler. Firma del cliente y coordinador requerida para confirmar la devolución.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="gestion" class="screen">
+          <div class="card">
+            <h4><i class="fas fa-cog"></i> Gestión de Paquetes</h4>
+            <div class="form-group">
+              <label for="gestion-tipo">Tipo</label>
+              <select id="gestion-tipo" aria-label="Tipo de paquete" onchange="initGestionMaps()">
+                <option value="bus">Alquiler de Bus</option>
+                <option value="paquete">Paquete Turístico</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="gestion-nombre">Nombre</label>
+              <input id="gestion-nombre" type="text" placeholder="Nombre del paquete" aria-label="Nombre del paquete"/>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="gestion-precio">Precio Base (USD)</label>
+                <input id="gestion-precio" type="number" placeholder="Ej: 200.00" step="0.01" aria-label="Precio base"/>
+              </div>
+              <div class="form-group">
+                <label for="gestion-capacity">Capacidad (opcional)</label>
+                <input id="gestion-capacity" type="number" placeholder="Capacidad" aria-label="Capacidad"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="descripcion">Descripción Detallada (con marketing atractivo)</label>
+              <textarea id="descripcion" rows="5" placeholder="Describe detalladamente para atraer clientes, incluye beneficios, experiencias únicas, etc." aria-label="Descripción"></textarea>
+            </div>
+            <div id="gestion-mapas" style="display:flex;gap:12px;flex-direction:column">
+              <div id="entrega-mapa" class="minimap"></div>
+              <div id="itinerario-mapa" class="minimap" style="display:none"></div>
+            </div>
+            <div class="form-group">
+              <label for="entrega-nombre">Punto de Entrega</label>
+              <div style="display:flex;gap:8px">
+                <input id="entrega-nombre" type="text" placeholder="Nombre punto" aria-label="Nombre punto de entrega"/>
+                <button class="btn ghost" onclick="addPuntoEntrega()"><i class="fas fa-plus"></i> Añadir</button>
+              </div>
+            </div>
+            <div id="entrega-list"></div>
+            <div class="form-group">
+              <label for="parada-nombre">Parada de Itinerario</label>
+              <div style="display:flex;gap:8px">
+                <input id="parada-nombre" type="text" placeholder="Nombre parada" aria-label="Nombre parada"/>
+                <input id="parada-horario" type="time" aria-label="Horario parada"/>
+                <button class="btn ghost" onclick="addParada()"><i class="fas fa-plus"></i> Añadir</button>
+              </div>
+            </div>
+            <div id="itinerario-list"></div>
+            <div class="form-group">
+              <label for="actividad-nombre">Actividad (opcional)</label>
+              <div style="display:flex;gap:8px">
+                <input id="actividad-nombre" type="text" placeholder="Actividad" aria-label="Nombre actividad"/>
+                <input id="actividad-costo" type="number" step="0.01" placeholder="Costo USD" aria-label="Costo actividad"/>
+                <button class="btn ghost" onclick="addActividad()">Agregar</button>
+              </div>
+            </div>
+            <div id="actividades-list"></div>
+            <div id="bus-details" style="display:none">
+              <div class="form-group">
+                <label>Características del Bus</label>
+                <div class="checkbox-group">
+                  <label><input type="checkbox" id="bus-ac" aria-label="Aire Acondicionado"> Aire Acondicionado</label>
+                  <label><input type="checkbox" id="bus-wifi" aria-label="WiFi"> WiFi</label>
+                  <label><input type="checkbox" id="bus-bathroom" aria-label="Baño"> Baño</label>
+                  <label><input type="checkbox" id="bus-tv" aria-label="TV"> TV</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="bus-seats">Número de Asientos</label>
+                <input id="bus-seats" type="number" placeholder="Ej: 50" aria-label="Número de asientos"/>
+              </div>
+              <div class="form-group">
+                <label>Fotos del Bus</label>
+                <input type="file" id="bus-files" multiple accept="image/*" aria-label="Fotos del bus"/>
+              </div>
+            </div>
+            <div id="paquete-details" style="display:none">
+              <div class="form-group">
+                <label for="hotel-desc">Descripción del Hotel</label>
+                <textarea id="hotel-desc" rows="3" placeholder="Descripción detallada del hotel..." aria-label="Descripción del hotel"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Fotos de los Lugares que se Recorren</label>
+                <input type="file" id="lugares-files" multiple accept="image/*" aria-label="Fotos de lugares"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" onclick="addItem()">Guardar Paquete</button>
+              <button class="btn ghost" onclick="resetGestion()">Resetear</button>
+            </div>
+          </div>
+          <div id="package-view" style="display:none;">
+            <div class="card">
+              <h4>Detalles del Paquete</h4>
+              <div id="package-content"></div>
+              <button class="btn" onclick="document.getElementById('package-view').style.display='none'">Cerrar</button>
+            </div>
+          </div>
+          <div class="card">
+            <h4>Paquetes Existentes</h4>
+            <div class="reservations" id="packages-list"></div>
+          </div>
+          <!-- <div class="card">
+            <h4>Gestión de Usuarios</h4>
+            <div class="form-group">
+              <label for="user-username">Usuario</label>
+              <input id="user-username" type="text" placeholder="Nombre de usuario" aria-label="Nombre de usuario"/>
+            </div>
+            <div class="form-group">
+              <label for="user-password">Contraseña</label>
+              <input id="user-password" type="password" placeholder="Contraseña" aria-label="Contraseña"/>
+            </div>
+            <div class="form-group">
+              <label for="user-role">Rol</label>
+              <select id="user-role" aria-label="Rol de usuario">
+                <option value="admin">Administrador</option>
+                <option value="coordinator">Coordinador</option>
+              </select>
+            </div>
+            <button class="btn" onclick="addUser()">Agregar Usuario</button>
+            <div class="user-list" id="users-list"></div>
+          </div>
+       -->
+              <div class="card">
+            <h4>Acciones Rápidas</h4>
+            <button class="btn ghost" onclick="seedDemoData()"><i class="fas fa-seedling"></i> Cargar Demo</button>
+            <button class="btn ghost" onclick="clearAllData()"><i class="fas fa-trash-alt"></i> Borrar Todo</button>
+          </div>
+        </section>
+      </div>
+      <nav class="bottom-nav">
+        <button class="tab" data-tab="login" onclick="goTo('login')"><i class="fas fa-sign-in-alt"></i><span>Iniciar</span></button>
+        <button class="tab" data-tab="admin" onclick="goTo('admin')"><i class="fas fa-user-shield"></i><span>Admin</span></button>
+        <button class="tab" data-tab="reservas" onclick="goTo('reservas')"><i class="fas fa-list"></i><span>Reservas</span></button>
+        <button class="tab" data-tab="validar-qr" onclick="goTo('validar-qr')"><i class="fas fa-qrcode"></i><span>QR</span></button>
+        <button class="tab" data-tab="coordinador" onclick="goTo('coordinador')"><i class="fas fa-user-tie"></i><span>Coordinador</span></button>
+        <button class="tab" data-tab="gestion" onclick="goTo('gestion')"><i class="fas fa-cog"></i><span>Gestión</span></button>
+      </nav>
+    </div>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const STORAGE_KEY = 'turismo_express_v1';
+    const DEFAULTS = { reservations: [], packages: [], users: [], termsPDF: null };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) { localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULTS)); return structuredClone(DEFAULTS); }
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('loadState', e);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULTS));
+        return structuredClone(DEFAULTS);
+      }
+    }
+
+    function saveState(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      updateStats();
+    }
+
+    let state = loadState();
+    let entregaMap, itinerarioMap, minimapQrMap, routeMap;
+    let currentStream = null;
+    let lastNominatim = 0;
+    let puntosEntrega = [], paradas = [], actividades = [];
+    let currentRole = null;
+
+    function seedDemoData() {
+      const demo = {
+        reservations: [
+          { id: 'res1', type: 'bus', puntoEntrega: 'Terminal Carcelén, Quito', precio: 350, horario: '07:30', codigoQR: 'TUR-001', estado: 'Pendiente' },
+          { id: 'res2', type: 'paquete', destino: 'Laguna Quilotoa', recogida: 'Hotel Dann Carlton, Quito', actividades: ['Caminata al cráter', 'Kayak'], precio: 120, codigoQR: 'TOUR-002', estado: 'Confirmado', itinerario: [{ parada: 'Quito', horario: '06:00', lat: -0.180653, lng: -78.467834 }, { parada: 'Latacunga', horario: '08:00', lat: -0.9332, lng: -78.6155 }, { parada: 'Quilotoa', horario: '09:30', lat: -0.8667, lng: -78.9167 }], seats: [{ number: 22, occupied: true, client: 'Cliente Ejemplo 1' }, { number: 5, occupied: true, client: 'Cliente Ejemplo 2' }] },
+          { id: 'res3', type: 'paquete', destino: 'Baños de Agua Santa', recogida: 'Terminal Quitumbe, Quito', actividades: ['Ruta de las cascadas'], precio: 150, codigoQR: 'TOUR-003', estado: 'Confirmado', itinerario: [{ parada: 'Quito', horario: '07:00', lat: -0.2396, lng: -78.525 }, { parada: 'Ambato', horario: '09:00', lat: -1.2417, lng: -78.6198 }, { parada: 'Baños', horario: '10:30', lat: -1.3963, lng: -78.4229 }], seats: [{ number: 10, occupied: true, client: 'Cliente Ejemplo 3' }] }
+        ],
+        packages: [
+          { id: 'pkg1', type: 'bus', nombre: 'Bus Ejecutivo Quito', precio: 350, capacidad: 50, descripcion: 'Bus moderno con WiFi y A/C', caracteristicas: { ac: true, wifi: true, bathroom: true, tv: false }, seats: 50, puntosEntrega: [{ nombre: 'Terminal Carcelén, Quito', lat: -0.1034, lng: -78.4778 }] },
+          { id: 'pkg2', type: 'paquete', nombre: 'Tour Quilotoa', precio: 120, descripcion: 'Explora la mágica Laguna Quilotoa', itinerario: [{ parada: 'Quito', horario: '06:00', lat: -0.180653, lng: -78.467834 }, { parada: 'Quilotoa', horario: '09:30', lat: -0.8667, lng: -78.9167 }], actividades: [{ nombre: 'Caminata', costo: 20 }, { nombre: 'Kayak', costo: 30 }], hotel: 'Hotel Quilotoa Lodge' }
+        ],
+        users: [
+          { id: 'user1', username: 'admin', password: 'admin123', role: 'admin' },
+          { id: 'user2', username: 'coordinator', password: 'coord123', role: 'coordinator' }
+        ],
+        termsPDF: null
+      };
+      state = demo;
+      saveState(state);
+      renderReservations();
+      renderPackages();
+      renderUsers();
+      alert('Demo cargada.');
+    }
+
+    function clearAllData() {
+      if (confirm('¿Borrar todos los datos locales?')) {
+        state = structuredClone(DEFAULTS);
+        saveState(state);
+        renderReservations();
+        renderPackages();
+        renderUsers();
+        alert('Datos borrados.');
+      }
+    }
+
+    function goTo(screenId) {
+      document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.opacity = '0'; });
+      const targetScreen = document.getElementById(screenId);
+      if (!targetScreen) return;
+      targetScreen.classList.add('active');
+      setTimeout(() => { targetScreen.style.opacity = '1'; }, 10);
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      const tab = document.querySelector(`.tab[data-tab="${screenId}"]`);
+      if (tab) tab.classList.add('active');
+
+      if (screenId === 'reservas') {
+        renderReservations();
+        updateReservationPackages();
+      }
+      if (screenId === 'gestion') {
+        initGestionMaps();
+        renderPackages();
+        renderUsers();
+      }
+      if (screenId === 'validar-qr') stopQRScanner();
+      if (screenId === 'coordinador') {
+        initRouteMap();
+        initCoordinator();
+      }
+    }
+
+    function login() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const user = state.users.find(u => u.username === username && u.password === password);
+      if (user) {
+        currentRole = user.role;
+        document.getElementById('profile-name').textContent = username;
+        document.getElementById('coordinator-name').textContent = username;
+        if (currentRole === 'admin') goTo('admin');
+        else if (currentRole === 'coordinator') goTo('coordinador');
+      } else {
+        alert('Credenciales incorrectas');
+      }
+    }
+
+    function logout() {
+      currentRole = null;
+      goTo('login');
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+    }
+
+    function renderUsers() {
+      const usersList = document.getElementById('users-list');
+      usersList.innerHTML = '';
+      if (state.users.length === 0) {
+        usersList.innerHTML = '<div class="small-muted">Sin usuarios.</div>';
+        return;
+      }
+      state.users.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.innerHTML = `
+          <div class="meta"><div class="type"><strong>${u.username}</strong></div><div class="tag">${u.role}</div></div>
+          <div class="actions">
+            <button class="btn danger" onclick="deleteUser('${u.id}')">Borrar</button>
+          </div>
+        `;
+        usersList.appendChild(div);
+      });
+    }
+
+    function addUser() {
+      const username = document.getElementById('user-username').value.trim();
+      const password = document.getElementById('user-password').value.trim();
+      const role = document.getElementById('user-role').value;
+      if (!username || !password) { alert('Completa usuario y contraseña.'); return; }
+      if (state.users.find(u => u.username === username)) { alert('Usuario ya existe.'); return; }
+      state.users.push({ id: 'user_' + Date.now(), username, password, role });
+      saveState(state);
+      renderUsers();
+      document.getElementById('user-username').value = '';
+      document.getElementById('user-password').value = '';
+      alert('Usuario agregado.');
+    }
+
+    function deleteUser(id) {
+      if (!confirm('¿Borrar este usuario?')) return;
+      state.users = state.users.filter(u => u.id !== id);
+      saveState(state);
+      renderUsers();
+    }
+
+    function updateStats() {
+      const total = state.reservations.length;
+      const active = state.reservations.filter(r => r.estado === 'Confirmado').length;
+      document.getElementById('stats-summary').textContent = `Total: ${total} reservas, ${active} activas`;
+      document.getElementById('active-reservations').textContent = active;
+    }
+
+    function renderReservations() {
+      const reservationsList = document.getElementById('reservations-list');
+      reservationsList.innerHTML = '';
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const filter = document.getElementById('filter-type').value;
+      let filtered = state.reservations;
+      if (filter !== 'all') filtered = filtered.filter(r => r.type === filter);
+      if (search) {
+        filtered = filtered.filter(r => 
+          (r.codigoQR && r.codigoQR.toLowerCase().includes(search)) ||
+          (r.destino && r.destino.toLowerCase().includes(search)) ||
+          (r.puntoEntrega && r.puntoEntrega.toLowerCase().includes(search)) ||
+          (r.recogida && r.recogida.toLowerCase().includes(search))
+        );
+      }
+      if (filtered.length === 0) {
+        reservationsList.innerHTML = '<div class="small-muted">Sin reservas.</div>';
+        return;
+      }
+      filtered.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'reservation';
+        div.innerHTML = `
+          <div class="meta">
+            <div class="type">${r.type === 'bus' ? 'Alquiler de Bus' : 'Paquete Turístico'}</div>
+            <div class="tag">${r.estado}</div>
+          </div>
+          <p><strong>Código:</strong> ${r.codigoQR}</p>
+          ${r.type === 'bus' ? `
+            <p><strong>Punto de Entrega:</strong> ${r.puntoEntrega}</p>
+            <p><strong>Horario:</strong> ${r.horario}</p>
+          ` : `
+            <p><strong>Destino:</strong> ${r.destino}</p>
+            <p><strong>Recogida:</strong> ${r.recogida}</p>
+            <p><strong>Actividades:</strong> ${r.actividades ? r.actividades.join(', ') : 'N/A'}</p>
+          `}
+          <p><strong>Precio:</strong> $${r.precio}</p>
+          <div class="actions">
+            <button class="btn warn" onclick="editReservation('${r.id}')">Editar</button>
+            <button class="btn danger" onclick="deleteReservation('${r.id}')">Borrar</button>
+          </div>
+        `;
+        reservationsList.appendChild(div);
+      });
+    }
+
+    function toggleNewReservationForm() {
+      const form = document.getElementById('new-reservation-form');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      if (form.style.display === 'block') updateReservationForm();
+    }
+
+    function updateReservationForm() {
+      const type = document.getElementById('reserva-tipo').value;
+      document.getElementById('reserva-bus-details').style.display = type === 'bus' ? 'block' : 'none';
+      document.getElementById('reserva-paquete-details').style.display = type === 'paquete' ? 'block' : 'none';
+      updateReservationPackages();
+    }
+
+    function updateReservationPackages() {
+      const select = document.getElementById('reserva-paquete');
+      select.innerHTML = '<option value="">-- Selecciona un paquete --</option>';
+      state.packages.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.nombre;
+        select.appendChild(option);
+      });
+    }
+
+    function createReservation() {
+      const type = document.getElementById('reserva-tipo').value;
+      const paqueteId = document.getElementById('reserva-paquete').value;
+      const codigoQR = document.getElementById('reserva-codigo').value.trim();
+      const precio = parseFloat(document.getElementById('reserva-precio').value);
+      if (!codigoQR || isNaN(precio)) { alert('Completa código QR y precio.'); return; }
+      if (state.reservations.find(r => r.codigoQR === codigoQR)) { alert('Código QR ya existe.'); return; }
+      const reservation = { id: 'res_' + Date.now(), type, codigoQR, precio, estado: 'Pendiente' };
+      if (type === 'bus') {
+        reservation.puntoEntrega = document.getElementById('reserva-punto-entrega').value.trim();
+        reservation.horario = document.getElementById('reserva-horario').value;
+        if (!reservation.puntoEntrega || !reservation.horario) { alert('Completa punto de entrega y horario.'); return; }
+      } else {
+        reservation.destino = document.getElementById('reserva-destino').value.trim();
+        reservation.recogida = document.getElementById('reserva-recogida').value.trim();
+        reservation.actividades = document.getElementById('reserva-actividades').value.split(',').map(a => a.trim()).filter(a => a);
+        if (!reservation.destino || !reservation.recogida) { alert('Completa destino y punto de recogida.'); return; }
+        reservation.seats = [];
+      }
+      if (paqueteId) {
+        const pkg = state.packages.find(p => p.id === paqueteId);
+        if (pkg) {
+          reservation.paquete = pkg.nombre;
+          if (pkg.itinerario) reservation.itinerario = pkg.itinerario;
+        }
+      }
+      state.reservations.push(reservation);
+      saveState(state);
+      renderReservations();
+      toggleNewReservationForm();
+      alert('Reserva creada.');
+    }
+
+    function editReservation(id) {
+      const reservation = state.reservations.find(r => r.id === id);
+      if (!reservation) return;
+      document.getElementById('reserva-tipo').value = reservation.type;
+      document.getElementById('reserva-codigo').value = reservation.codigoQR;
+      document.getElementById('reserva-precio').value = reservation.precio;
+      if (reservation.type === 'bus') {
+        document.getElementById('reserva-punto-entrega').value = reservation.puntoEntrega;
+        document.getElementById('reserva-horario').value = reservation.horario;
+      } else {
+        document.getElementById('reserva-destino').value = reservation.destino;
+        document.getElementById('reserva-recogida').value = reservation.recogida;
+        document.getElementById('reserva-actividades').value = reservation.actividades ? reservation.actividades.join(', ') : '';
+      }
+      updateReservationForm();
+      toggleNewReservationForm();
+      state.reservations = state.reservations.filter(r => r.id !== id);
+      saveState(state);
+    }
+
+    function deleteReservation(id) {
+      if (!confirm('¿Borrar esta reserva?')) return;
+      state.reservations = state.reservations.filter(r => r.id !== id);
+      saveState(state);
+      renderReservations();
+    }
+
+    function startQRScanner() {
+      const video = document.getElementById('qr-scanner');
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          currentStream = stream;
+          video.srcObject = stream;
+          document.getElementById('btn-start-qr').style.display = 'none';
+          document.getElementById('btn-stop-qr').style.display = 'block';
+          scanQRCode();
+        })
+        .catch(err => {
+          console.error('QR Scanner Error:', err);
+          alert('Error al acceder a la cámara. Ingresa el código manualmente.');
+        });
+      const manualCode = document.getElementById('qr-code-manual').value.trim();
+      if (manualCode) validateQRCode(manualCode);
+    }
+
+    function stopQRScanner() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+      }
+      document.getElementById('btn-start-qr').style.display = 'block';
+      document.getElementById('btn-stop-qr').style.display = 'none';
+      document.getElementById('qr-result').style.display = 'none';
+      document.getElementById('qr-details').style.display = 'none';
+    }
+
+    function scanQRCode() {
+      const video = document.getElementById('qr-scanner');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      function tick() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            validateQRCode(code.data);
+            stopQRScanner();
+            return;
+          }
+        }
+        if (currentStream) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function validateQRCode(code) {
+      const reservation = state.reservations.find(r => r.codigoQR === code);
+      const resultDiv = document.getElementById('qr-result');
+      const detailsDiv = document.getElementById('qr-details-content');
+      resultDiv.style.display = 'block';
+      if (reservation) {
+        resultDiv.className = 'qr-result success';
+        resultDiv.textContent = `Código válido: ${code}`;
+        detailsDiv.innerHTML = `
+          <p><strong>Tipo:</strong> ${reservation.type === 'bus' ? 'Alquiler de Bus' : 'Paquete Turístico'}</p>
+          ${reservation.type === 'bus' ? `
+            <p><strong>Punto de Entrega:</strong> ${reservation.puntoEntrega}</p>
+            <p><strong>Horario:</strong> ${reservation.horario}</p>
+          ` : `
+            <p><strong>Destino:</strong> ${reservation.destino}</p>
+            <p><strong>Recogida:</strong> ${reservation.recogida}</p>
+            <p><strong>Actividades:</strong> ${reservation.actividades ? reservation.actividades.join(', ') : 'N/A'}</p>
+          `}
+          <p><strong>Precio:</strong> $${reservation.precio}</p>
+          <p><strong>Estado:</strong> ${reservation.estado}</p>
+        `;
+        document.getElementById('qr-details').style.display = 'block';
+        if (reservation.itinerario && reservation.itinerario.length > 0) {
+          initMinimapQR(reservation.itinerario[0].lat, reservation.itinerario[0].lng);
+        }
+      } else {
+        resultDiv.className = 'qr-result error';
+        resultDiv.textContent = `Código inválido: ${code}`;
+        document.getElementById('qr-details').style.display = 'none';
+      }
+    }
+
+    function initMinimapQR(lat, lng) {
+      if (minimapQrMap) minimapQrMap.remove();
+      minimapQrMap = L.map('minimap-qr').setView([lat, lng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(minimapQrMap);
+      L.marker([lat, lng]).addTo(minimapQrMap);
+    }
+
+    function initGestionMaps() {
+      const type = document.getElementById('gestion-tipo').value;
+      document.getElementById('bus-details').style.display = type === 'bus' ? 'block' : 'none';
+      document.getElementById('paquete-details').style.display = type === 'paquete' ? 'block' : 'none';
+      document.getElementById('itinerario-mapa').style.display = type === 'paquete' ? 'block' : 'none';
+      if (entregaMap) entregaMap.remove();
+      if (itinerarioMap) itinerarioMap.remove();
+      entregaMap = L.map('entrega-mapa').setView([-0.180653, -78.467834], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(entregaMap);
+      if (type === 'paquete') {
+        itinerarioMap = L.map('itinerario-mapa').setView([-0.180653, -78.467834], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(itinerarioMap);
+      }
+    }
+
+    function addPuntoEntrega() {
+      const nombre = document.getElementById('entrega-nombre').value.trim();
+      if (!nombre) { alert('Ingresa un nombre para el punto de entrega.'); return; }
+      const now = Date.now();
+      if (now - lastNominatim < 1000) { alert('Espera un momento antes de añadir otro punto.'); return; }
+      lastNominatim = now;
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(nombre)}&format=json&limit=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) { alert('No se encontró el lugar.'); return; }
+          const punto = { nombre, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          puntosEntrega.push(punto);
+          renderPuntosEntrega();
+          entregaMap.setView([punto.lat, punto.lng], 13);
+          L.marker([punto.lat, punto.lng]).addTo(entregaMap).bindPopup(nombre);
+          document.getElementById('entrega-nombre').value = '';
+        })
+        .catch(err => { console.error('Nominatim Error:', err); alert('Error al buscar el lugar.'); });
+    }
+
+    function renderPuntosEntrega() {
+      const list = document.getElementById('entrega-list');
+      list.innerHTML = '';
+      puntosEntrega.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `<p>${p.nombre} <button class="btn danger" onclick="puntosEntrega.splice(${i}, 1); renderPuntosEntrega();">Borrar</button></p>`;
+        list.appendChild(div);
+      });
+    }
+
+    function addParada() {
+      const nombre = document.getElementById('parada-nombre').value.trim();
+      const horario = document.getElementById('parada-horario').value;
+      if (!nombre || !horario) { alert('Completa nombre y horario de la parada.'); return; }
+      const now = Date.now();
+      if (now - lastNominatim < 1000) { alert('Espera un momento antes de añadir otra parada.'); return; }
+      lastNominatim = now;
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(nombre)}&format=json&limit=1`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) { alert('No se encontró el lugar.'); return; }
+          const parada = { parada: nombre, horario, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          paradas.push(parada);
+          renderParadas();
+          itinerarioMap.setView([parada.lat, parada.lng], 13);
+          L.marker([parada.lat, parada.lng]).addTo(itinerarioMap).bindPopup(`${nombre} (${horario})`);
+          document.getElementById('parada-nombre').value = '';
+          document.getElementById('parada-horario').value = '';
+        })
+        .catch(err => { console.error('Nominatim Error:', err); alert('Error al buscar el lugar.'); });
+    }
+
+    function renderParadas() {
+      const list = document.getElementById('itinerario-list');
+      list.innerHTML = '';
+      paradas.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `<p>${p.parada} - ${p.horario} <button class="btn danger" onclick="paradas.splice(${i}, 1); renderParadas();">Borrar</button></p>`;
+        list.appendChild(div);
+      });
+    }
+
+    function addActividad() {
+      const nombre = document.getElementById('actividad-nombre').value.trim();
+      const costo = parseFloat(document.getElementById('actividad-costo').value);
+      if (!nombre || isNaN(costo)) { alert('Completa nombre y costo de la actividad.'); return; }
+      actividades.push({ nombre, costo });
+      renderActividades();
+      document.getElementById('actividad-nombre').value = '';
+      document.getElementById('actividad-costo').value = '';
+    }
+
+    function renderActividades() {
+      const list = document.getElementById('actividades-list');
+      list.innerHTML = '';
+      actividades.forEach((a, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `<p>${a.nombre} - $${a.costo} <button class="btn danger" onclick="actividades.splice(${i}, 1); renderActividades();">Borrar</button></p>`;
+        list.appendChild(div);
+      });
+    }
+
+    function addItem() {
+      const type = document.getElementById('gestion-tipo').value;
+      const nombre = document.getElementById('gestion-nombre').value.trim();
+      const precio = parseFloat(document.getElementById('gestion-precio').value);
+      const capacidad = parseInt(document.getElementById('gestion-capacity').value) || null;
+      const descripcion = document.getElementById('descripcion').value.trim();
+      if (!nombre || isNaN(precio) || !descripcion) { alert('Completa nombre, precio y descripción.'); return; }
+      const pkg = { id: 'pkg_' + Date.now(), type, nombre, precio, capacidad, descripcion };
+      if (type === 'bus') {
+        pkg.caracteristicas = {
+          ac: document.getElementById('bus-ac').checked,
+          wifi: document.getElementById('bus-wifi').checked,
+          bathroom: document.getElementById('bus-bathroom').checked,
+          tv: document.getElementById('bus-tv').checked
+        };
+        pkg.seats = parseInt(document.getElementById('bus-seats').value) || 50;
+        pkg.puntosEntrega = puntosEntrega;
+      } else {
+        pkg.itinerario = paradas;
+        pkg.actividades = actividades;
+        pkg.hotel = document.getElementById('hotel-desc').value.trim();
+      }
+      state.packages.push(pkg);
+      saveState(state);
+      renderPackages();
+      resetGestion();
+      alert('Paquete creado.');
+    }
+
+    function resetGestion() {
+      document.getElementById('gestion-nombre').value = '';
+      document.getElementById('gestion-precio').value = '';
+      document.getElementById('gestion-capacity').value = '';
+      document.getElementById('descripcion').value = '';
+      document.getElementById('bus-ac').checked = false;
+      document.getElementById('bus-wifi').checked = false;
+      document.getElementById('bus-bathroom').checked = false;
+      document.getElementById('bus-tv').checked = false;
+      document.getElementById('bus-seats').value = '';
+      document.getElementById('hotel-desc').value = '';
+      puntosEntrega = [];
+      paradas = [];
+      actividades = [];
+      renderPuntosEntrega();
+      renderParadas();
+      renderActividades();
+      initGestionMaps();
+    }
+
+    function renderPackages() {
+      const packagesList = document.getElementById('packages-list');
+      packagesList.innerHTML = '';
+      if (state.packages.length === 0) {
+        packagesList.innerHTML = '<div class="small-muted">Sin paquetes.</div>';
+        return;
+      }
+      state.packages.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'reservation';
+        div.innerHTML = `
+          <div class="meta">
+            <div class="type">${p.type === 'bus' ? 'Alquiler de Bus' : 'Paquete Turístico'}</div>
+            <div class="price">$${p.precio}</div>
+          </div>
+          <p><strong>Nombre:</strong> ${p.nombre}</p>
+          <p><strong>Descripción:</strong> ${p.descripcion}</p>
+          ${p.type === 'bus' ? `
+            <p><strong>Capacidad:</strong> ${p.capacidad || 'N/A'}</p>
+            <p><strong>Características:</strong> ${Object.keys(p.caracteristicas || {}).filter(k => p.caracteristicas[k]).join(', ') || 'N/A'}</p>
+          ` : `
+            <p><strong>Hotel:</strong> ${p.hotel || 'N/A'}</p>
+            <p><strong>Actividades:</strong> ${p.actividades ? p.actividades.map(a => `${a.nombre} ($${a.costo})`).join(', ') : 'N/A'}</p>
+          `}
+          <div class="actions">
+            <button class="btn warn" onclick="viewPackage('${p.id}')">Ver</button>
+            <button class="btn danger" onclick="deletePackage('${p.id}')">Borrar</button>
+          </div>
+        `;
+        packagesList.appendChild(div);
+      });
+    }
+
+    function viewPackage(id) {
+      const pkg = state.packages.find(p => p.id === id);
+      if (!pkg) return;
+      const content = document.getElementById('package-content');
+      content.innerHTML = `
+        <p><strong>Nombre:</strong> ${pkg.nombre}</p>
+        <p><strong>Tipo:</strong> ${pkg.type === 'bus' ? 'Alquiler de Bus' : 'Paquete Turístico'}</p>
+        <p><strong>Precio:</strong> $${pkg.precio}</p>
+        <p><strong>Descripción:</strong> ${pkg.descripcion}</p>
+        ${pkg.type === 'bus' ? `
+          <p><strong>Capacidad:</strong> ${pkg.capacidad || 'N/A'}</p>
+          <p><strong>Características:</strong> ${Object.keys(pkg.caracteristicas || {}).filter(k => pkg.caracteristicas[k]).join(', ') || 'N/A'}</p>
+          <p><strong>Puntos de Entrega:</strong> ${pkg.puntosEntrega ? pkg.puntosEntrega.map(p => p.nombre).join(', ') : 'N/A'}</p>
+        ` : `
+          <p><strong>Hotel:</strong> ${pkg.hotel || 'N/A'}</p>
+          <p><strong>Itinerario:</strong> ${pkg.itinerario ? pkg.itinerario.map(p => `${p.parada} (${p.horario})`).join(', ') : 'N/A'}</p>
+          <p><strong>Actividades:</strong> ${pkg.actividades ? pkg.actividades.map(a => `${a.nombre} ($${a.costo})`).join(', ') : 'N/A'}</p>
+        `}
+      `;
+      document.getElementById('package-view').style.display = 'block';
+    }
+
+    function deletePackage(id) {
+      if (!confirm('¿Borrar este paquete?')) return;
+      state.packages = state.packages.filter(p => p.id !== id);
+      saveState(state);
+      renderPackages();
+    }
+
+    function initCoordinator() {
+      const select = document.getElementById('select-reserva');
+      select.innerHTML = '<option value="">-- Selecciona --</option>';
+      state.reservations.filter(r => r.type === 'paquete').forEach(r => {
+        const option = document.createElement('option');
+        option.value = r.id;
+        option.textContent = `${r.codigoQR} - ${r.destino}`;
+        select.appendChild(option);
+      });
+      const selectedId = select.value;
+      if (selectedId) {
+        const reservation = state.reservations.find(r => r.id === selectedId);
+        document.getElementById('current-route').textContent = reservation ? reservation.destino : 'Sin ruta seleccionada';
+      }
+      loadSeats();
+    }
+
+    function loadSeats() {
+  const select = document.getElementById('select-reserva');
+  const reservationId = select.value;
+  const seatGrid = document.getElementById('seat-grid');
+  seatGrid.innerHTML = '';
+  if (!reservationId) return;
+  const reservation = state.reservations.find(r => r.id === reservationId);
+  if (!reservation) return;
+  const totalSeats = 50; // Default bus capacity
+  for (let i = 1; i <= totalSeats; i++) {
+    const seat = reservation.seats ? reservation.seats.find(s => s.number === i) : null;
+    const div = document.createElement('div');
+    div.className = 'seat' + (seat ? ' occupied' : ' available');
+    div.textContent = i;
+    if (seat) {
+      div.setAttribute('title', `Reservado por: ${seat.client}`); // Tooltip with client name
+      div.onclick = () => toggleSeat(reservationId, i, seat.client);
+    } else {
+      div.onclick = () => toggleSeat(reservationId, i);
+    }
+    seatGrid.appendChild(div);
+  }
+}
+
+function toggleSeat(reservationId, seatNumber, currentClient = null) {
+  const reservation = state.reservations.find(r => r.id === reservationId);
+  if (!reservation.seats) reservation.seats = [];
+  const seat = reservation.seats.find(s => s.number === seatNumber);
+  if (seat) {
+    // Unassign seat with confirmation
+    if (confirm(`¿Deseas desasignar el asiento ${seatNumber} reservado por ${currentClient}?`)) {
+      reservation.seats = reservation.seats.filter(s => s.number !== seatNumber);
+      alert(`Asiento ${seatNumber} desasignado.`);
+    }
+  } else {
+    // Assign seat to a new client
+    const clientName = prompt('Nombre del cliente:', currentClient || '');
+    if (clientName) {
+      reservation.seats.push({ number: seatNumber, occupied: true, client: clientName });
+      alert(`Asiento ${seatNumber} asignado a ${clientName}.`);
+    } else if (clientName === '') {
+      alert('Debes ingresar un nombre para el cliente.');
+    }
+  }
+  saveState(state);
+  loadSeats();
+}
+    function initRouteMap() {
+      if (routeMap) routeMap.remove();
+      routeMap = L.map('route-map').setView([-0.180653, -78.467834], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(routeMap);
+      const select = document.getElementById('select-reserva');
+      const reservationId = select.value;
+      if (reservationId) {
+        const reservation = state.reservations.find(r => r.id === reservationId);
+        if (reservation && reservation.itinerario) {
+          reservation.itinerario.forEach(p => {
+            L.marker([p.lat, p.lng]).addTo(routeMap).bindPopup(`${p.parada} (${p.horario})`);
+          });
+          if (reservation.itinerario.length > 1) {
+            const coords = reservation.itinerario.map(p => [p.lat, p.lng]);
+            L.polyline(coords, { color: 'blue' }).addTo(routeMap);
+            routeMap.fitBounds(coords);
+          }
+        }
+      }
+    }
+
+    function uploadTermsPDF() {
+      const file = document.getElementById('file-upload').files[0];
+      if (!file || file.type !== 'application/pdf') { alert('Selecciona un PDF válido.'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.termsPDF = reader.result;
+        saveState(state);
+        document.getElementById('terms-pdf-link').href = state.termsPDF;
+        document.getElementById('terms-pdf-view').style.display = 'block';
+        alert('PDF cargado.');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    window.addEventListener('load', () => {
+      renderReservations();
+      updateStats();
+      initGestionMaps();
+      document.getElementById('gestion-tipo').addEventListener('change', initGestionMaps);
+      document.getElementById('reserva-tipo').addEventListener('change', updateReservationForm);
+      document.getElementById('search-input').addEventListener('input', renderReservations);
+      document.getElementById('filter-type').addEventListener('change', renderReservations);
+      goTo('login');
+      renderUsers();
+      if (state.termsPDF) {
+        document.getElementById('terms-pdf-link').href = state.termsPDF;
+        document.getElementById('terms-pdf-view').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

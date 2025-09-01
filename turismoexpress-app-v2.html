@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>TurismoExpress - Ecuador</title>
+
+    <!-- Estilos/Íconos -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="app-utils.js"></script>
+
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --primary-light: #dbeafe;
+        --secondary: #f59e0b;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --muted: #64748b;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --border: #e2e8f0;
+        --text: #1e293b;
+        --text-light: #64748b;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .app-container {
+        max-width: 480px;
+        margin: 0 auto;
+        background: var(--card);
+        min-height: 100vh;
+        position: relative;
+        box-shadow: var(--shadow-lg);
+      }
+
+      /* Header */
+      .header {
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        color: white;
+        padding: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: var(--shadow);
+      }
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 1.25rem;
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .btn-icon {
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .btn-icon:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      /* Navigation */
+      .nav-tabs {
+        display: flex;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 73px;
+        z-index: 90;
+      }
+
+      .nav-tab {
+        flex: 1;
+        padding: 1rem;
+        text-align: center;
+        background: none;
+        border: none;
+        color: var(--text-light);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 2px solid transparent;
+      }
+
+      .nav-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+      }
+
+      /* Content */
+      .content {
+        padding: 1rem;
+      }
+
+      .screen {
+        display: none;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .screen.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Cards */
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+
+      .card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0;
+      }
+
+      .card-subtitle {
+        color: var(--text-light);
+        font-size: 0.875rem;
+        margin: 0.25rem 0 0 0;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+      }
+
+      .btn-secondary:hover {
+        background: #bfdbfe;
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+      }
+
+      .btn-outline:hover {
+        background: var(--primary);
+        color: white;
+      }
+
+      .btn-full {
+        width: 100%;
+      }
+
+      /* Forms */
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        background: var(--card);
+      }
+
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      /* Route Cards */
+      .route-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--card);
+      }
+
+      .route-card:hover {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .route-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+
+      .route-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .route-time {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .route-duration {
+        color: var(--text-light);
+        font-size: 0.875rem;
+      }
+
+      .route-price {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 1.125rem;
+      }
+
+      .route-features {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+
+      .feature-tag {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      /* Seat Selection */
+      .seat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+        margin: 1rem 0;
+      }
+
+      .seat {
+        aspect-ratio: 1;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+      }
+
+      .seat.available {
+        background: var(--card);
+        color: var(--text);
+      }
+
+      .seat.available:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+      }
+
+      .seat.selected {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+      }
+
+      .seat.occupied {
+        background: var(--muted);
+        color: white;
+        cursor: not-allowed;
+      }
+
+      /* Payment Options */
+      .payment-option {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .payment-option:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+      }
+
+      .payment-option.selected {
+        border-color: var(--primary);
+        background: var(--primary-light);
+      }
+
+      .payment-option i {
+        font-size: 1.5rem;
+        color: var(--primary);
+      }
+
+      /* Loading */
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid var(--border);
+        border-top: 2px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Bottom Navigation */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 480px;
+        background: var(--card);
+        border-top: 1px solid var(--border);
+        display: flex;
+        padding: 0.5rem;
+        gap: 0.25rem;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        border: none;
+        background: none;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: all 0.2s;
+        border-radius: 8px;
+      }
+
+      .nav-item.active {
+        color: var(--primary);
+        background: var(--primary-light);
+      }
+
+      .nav-item i {
+        font-size: 1.25rem;
+      }
+
+      .nav-item span {
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      /* Utility Classes */
+      .text-center {
+        text-align: center;
+      }
+      .text-muted {
+        color: var(--text-light);
+      }
+      .mb-1 {
+        margin-bottom: 0.5rem;
+      }
+      .mb-2 {
+        margin-bottom: 1rem;
+      }
+      .mt-1 {
+        margin-top: 0.5rem;
+      }
+      .mt-2 {
+        margin-top: 1rem;
+      }
+      .d-none {
+        display: none;
+      }
+      .d-flex {
+        display: flex;
+      }
+      .align-center {
+        align-items: center;
+      }
+      .justify-between {
+        justify-content: space-between;
+      }
+      .gap-1 {
+        gap: 0.5rem;
+      }
+      .gap-2 {
+        gap: 1rem;
+      }
+
+      /* Terms and Conditions */
+      #terminos-alquiler {
+        padding: 1rem;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      #terminos-alquiler .card {
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        border-radius: 12px;
+        padding: 1.5rem;
+        background: var(--card);
+      }
+
+      #terminos-alquiler h4 {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--primary);
+        margin-bottom: 1rem;
+      }
+
+      #terminos-alquiler .terms-section p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+      }
+
+      #terminos-alquiler .btn {
+        margin-top: 1rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      #terminos-alquiler .btn:hover {
+        background: var(--primary-dark);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <div class="logo">
+            <div class="logo-icon">TE</div>
+            <span>TurismoExpress</span>
+          </div>
+          <div class="header-actions">
+            <button class="btn-icon" onclick="toggleNotifications()">
+              <i class="fas fa-bell"></i>
+            </button>
+            <button class="btn-icon" onclick="goTo('profile')">
+              <i class="fas fa-user"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('buses')">
+          <i class="fas fa-bus"></i> Buses
+        </button>
+        <button class="nav-tab" onclick="switchTab('tours')">
+          <i class="fas fa-map-marked-alt"></i> Tours
+        </button>
+        <button class="nav-tab" onclick="switchTab('rental')">
+          <i class="fas fa-truck"></i> Alquiler
+        </button>
+        <button class="nav-tab" onclick="switchTab('tickets')">
+          <i class="fas fa-ticket-alt"></i> Mis Tickets
+        </button>
+      </nav>
+
+      <!-- Content -->
+      <main class="content">
+        <!-- Login Screen -->
+        <section id="login" class="screen active">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Iniciar Sesión</h3>
+              <p class="card-subtitle">Accede a tu cuenta</p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Usuario</label>
+              <input
+                type="text"
+                class="form-input"
+                id="login-username"
+                placeholder="Ingresa tu usuario"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Contraseña</label>
+              <input
+                type="password"
+                class="form-input"
+                id="login-password"
+                placeholder="Ingresa tu contraseña"
+              />
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="handleLogin()">
+              <i class="fas fa-sign-in-alt"></i> Ingresar
+            </button>
+          </div>
+        </section>
+
+        <!-- Buses Tab -->
+        <section id="buses" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Buscar Ruta</h3>
+                <p class="card-subtitle">Encuentra tu destino</p>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="radio" name="option" value="option1" />Ida y Vuelta
+              </label>
+              <label>
+                <input type="radio" name="option" value="option2" />Solo Ida
+              </label>
+              <label style="margin-top: 20px" class="form-label">Origen</label>
+              <select class="form-select" id="bus-origin">
+                <option value="">Selecciona origen</option>
+                <option value="quito">Quito</option>
+                <option value="guayaquil">Guayaquil</option>
+                <option value="cuenca">Cuenca</option>
+                <option value="manta">Manta</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Destino</label>
+              <select class="form-select" id="bus-destination">
+                <option value="">Selecciona destino</option>
+                <option value="guayaquil">Guayaquil</option>
+                <option value="quito">Quito</option>
+                <option value="cuenca">Cuenca</option>
+                <option value="manta">Manta</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Fecha de Viaje</label>
+              <input type="date" class="form-input" id="bus-date" />
+            </div>
+
+            <button
+              class="btn btn-primary btn-full"
+              onclick="searchBusRoutes()"
+            >
+              <i class="fas fa-search"></i> Buscar Rutas
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Rutas Disponibles</h3>
+            </div>
+            <div id="bus-routes-list">
+              <!-- Routes will be loaded here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Tours Tab -->
+        <section id="tours" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Tours Turísticos</h3>
+              <p class="card-subtitle">Explora Ecuador</p>
+            </div>
+            <div id="tours-list">
+              <!-- Tours will be loaded here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Bus Rental Tab -->
+        <section id="rental" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Alquiler de Bus Completo</h3>
+              <p class="card-subtitle">Para grupos y eventos</p>
+            </div>
+            <div id="bus-rental-list">
+              <!-- Bus rental options will be loaded here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Tickets Tab -->
+        <section id="tickets" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Mis Tickets</h3>
+              <p class="card-subtitle">Gestiona tus reservas</p>
+            </div>
+            <div id="my-tickets-list">
+              <!-- User tickets will be loaded here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Terms and Conditions for Rental -->
+        <section class="screen" id="terminos-alquiler">
+          <p class="back" onclick="goBack()">← Volver</p>
+          <div class="card">
+            <h4>Términos y Condiciones</h4>
+            <div class="terms-section">
+              <p><strong>Acuerdo de Alquiler de Bus</strong></p>
+              <p>
+                El cliente se compromete a devolver el bus alquilado en las
+                condiciones iniciales y en el punto de entrega acordado antes de
+                las 6:00 PM del día de finalización. Cualquier daño o retraso
+                incurrirá en una multa del 20% del precio total. TurismoExpress
+                no se hace responsable por uso indebido o accidentes fuera de
+                las rutas autorizadas.
+              </p>
+              <p>
+                El coordinador validará el estado del bus al inicio y
+                finalización del alquiler. Firma del cliente requerida para
+                confirmar la devolución.
+              </p>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="terms-checkbox"
+                  onchange="toggleAcceptButton()"
+                />
+                Acepto los términos y condiciones
+              </label>
+            </div>
+            <button
+              class="btn btn-primary btn-full"
+              id="accept-terms-btn"
+              onclick="acceptTerms()"
+              disabled
+            >
+              Aceptar Términos y Continuar
+            </button>
+          </div>
+        </section>
+
+        <!-- Booking Flow Screens -->
+        <section id="seat-selection" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Selección de Asientos</h3>
+              <p class="card-subtitle" id="seat-selection-info">
+                Selecciona tus asientos
+              </p>
+            </div>
+            <div class="seat-grid" id="seat-grid"></div>
+            <div class="d-flex justify-between align-center mt-2">
+              <span
+                >Asientos seleccionados:
+                <strong id="selected-seats-count">0</strong></span
+              >
+              <span>Total: <strong id="seat-total-price">$0</strong></span>
+            </div>
+            <button
+              class="btn btn-primary btn-full mt-2"
+              onclick="proceedToPayment()"
+            >
+              <i class="fas fa-credit-card"></i> Continuar al Pago
+            </button>
+          </div>
+        </section>
+
+        <section id="payment" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Método de Pago</h3>
+              <p class="card-subtitle">Selecciona tu forma de pago</p>
+            </div>
+
+            <div class="payment-option" onclick="selectPaymentMethod('card')">
+              <i class="fas fa-credit-card"></i>
+              <div>
+                <strong>Tarjeta de Crédito/Débito</strong>
+                <p class="text-muted">Visa, Mastercard, American Express</p>
+              </div>
+            </div>
+
+            <div class="payment-option" onclick="selectPaymentMethod('paypal')">
+              <i class="fab fa-paypal"></i>
+              <div>
+                <strong>PayPal</strong>
+                <p class="text-muted">Pago seguro con PayPal</p>
+              </div>
+            </div>
+
+            <div
+              class="payment-option"
+              onclick="selectPaymentMethod('transfer')"
+            >
+              <i class="fas fa-university"></i>
+              <div>
+                <strong>Transferencia Bancaria</strong>
+                <p class="text-muted">Transferencia directa</p>
+              </div>
+            </div>
+
+            <div id="payment-form" class="d-none">
+              <div class="form-group">
+                <label class="form-label" id="payment-label"
+                  >Datos de Pago</label
+                >
+                <input
+                  type="text"
+                  class="form-input"
+                  id="payment-input"
+                  placeholder="Ingresa los datos"
+                />
+              </div>
+              <div class="loading d-none" id="payment-loading">
+                <div class="spinner"></div>
+                <span class="ml-2">Procesando pago...</span>
+              </div>
+              <button
+                class="btn btn-primary btn-full"
+                onclick="processPayment()"
+              >
+                <i class="fas fa-lock"></i> Confirmar Pago
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Profile Screen -->
+        <section id="profile" class="screen">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Mi Perfil</h3>
+              <p class="card-subtitle">Gestiona tu cuenta</p>
+            </div>
+
+            <div class="d-flex align-center gap-2 mb-2">
+              <div
+                style="
+                  width: 60px;
+                  height: 60px;
+                  background: var(--primary-light);
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 1.5rem;
+                  color: var(--primary);
+                "
+              >
+                <i class="fas fa-user"></i>
+              </div>
+              <div>
+                <h4 style="margin: 0" id="profile-name">Usuario</h4>
+                <p class="text-muted" style="margin: 0" id="profile-email">
+                  usuario@turismoexpress.com
+                </p>
+              </div>
+            </div>
+
+            <button
+              class="btn btn-primary btn-full mb-1"
+              onclick="editProfile()"
+            >
+              <i class="fas fa-edit"></i> Editar Perfil
+            </button>
+
+            <button class="btn btn-outline btn-full" onclick="handleLogout()">
+              <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <!-- Bottom Navigation -->
+      <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('buses')">
+          <i class="fas fa-bus"></i>
+          <span>Buses</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('tours')">
+          <i class="fas fa-map-marked-alt"></i>
+          <span>Tours</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('rental')">
+          <i class="fas fa-truck"></i>
+          <span>Alquiler</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('tickets')">
+          <i class="fas fa-ticket-alt"></i>
+          <span>Tickets</span>
+        </button>
+      </nav>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      // Global state
+      let currentTab = "buses";
+      let currentScreen = "login";
+      let utils = new TurismoExpressUtils();
+      let selectedSeats = [];
+      let currentBooking = null;
+      let selectedPaymentMethod = null;
+
+      // Initialize app
+      document.addEventListener("DOMContentLoaded", function () {
+        utils.initializeData();
+        setupEventListeners();
+        loadInitialData();
+      });
+
+      function setupEventListeners() {
+        // Date picker setup
+        const today = new Date().toISOString().split("T")[0];
+        document.getElementById("bus-date").min = today;
+        document.getElementById("bus-date").value = today;
+      }
+
+      function loadInitialData() {
+        loadTours();
+        loadBusRentals();
+        loadUserTickets();
+      }
+
+      function handleLogin() {
+        const username = document.getElementById("login-username").value;
+        const password = document.getElementById("login-password").value;
+
+        const result = utils.login(username, password);
+
+        if (result.success) {
+          utils.showNotification("Inicio de sesión exitoso", "success");
+          goTo("buses");
+          updateProfileInfo();
+        } else {
+          utils.showNotification(result.message, "danger");
+        }
+      }
+
+      function acceptTerms() {
+        const termsAccepted = confirm(
+          "¿Aceptas los términos y condiciones para el alquiler del bus?"
+        );
+        if (termsAccepted) {
+          goTo("payment");
+        } else {
+          utils.showNotification(
+            "Debes aceptar los términos para continuar.",
+            "warning"
+          );
+        }
+      }
+
+      function goBack() {
+        goTo("rental");
+      }
+
+      function toggleAcceptButton() {
+        const checkbox = document.getElementById("terms-checkbox");
+        const acceptButton = document.getElementById("accept-terms-btn");
+        acceptButton.disabled = !checkbox.checked;
+      }
+
+      function handleLogout() {
+        if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
+          utils.logout();
+          goTo("login");
+          utils.showNotification("Sesión cerrada", "info");
+        }
+      }
+
+      function updateProfileInfo() {
+        const user = utils.getCurrentUser();
+        if (user) {
+          document.getElementById("profile-name").textContent = user.name;
+          document.getElementById(
+            "profile-email"
+          ).textContent = `${user.username}@turismoexpress.com`;
+        }
+      }
+
+      function switchTab(tabName) {
+        currentTab = tabName;
+
+        // Update tab buttons
+        document
+          .querySelectorAll(".nav-tab")
+          .forEach((tab) => tab.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((item) => item.classList.remove("active"));
+
+        event.target.classList.add("active");
+        document
+          .querySelector(`[onclick="switchTab('${tabName}')"]`)
+          .classList.add("active");
+
+        // Update screens
+        document
+          .querySelectorAll(".screen")
+          .forEach((screen) => screen.classList.remove("active"));
+        document.getElementById(tabName).classList.add("active");
+      }
+
+      function goTo(screenName) {
+        currentScreen = screenName;
+        document
+          .querySelectorAll(".screen")
+          .forEach((screen) => screen.classList.remove("active"));
+        document.getElementById(screenName).classList.add("active");
+      }
+
+      function searchBusRoutes() {
+        const origin = document.getElementById("bus-origin").value;
+        const destination = document.getElementById("bus-destination").value;
+        const date = document.getElementById("bus-date").value;
+
+        if (!origin || !destination || !date) {
+          utils.showNotification(
+            "Por favor completa todos los campos",
+            "warning"
+          );
+          return;
+        }
+
+        const routes = utils
+          .getRoutes()
+          .filter(
+            (route) =>
+              route.origin.toLowerCase() === origin &&
+              route.destination.toLowerCase() === destination
+          );
+
+        renderBusRoutes(routes);
+      }
+
+      function renderBusRoutes(routes) {
+        const container = document.getElementById("bus-routes-list");
+        container.innerHTML = "";
+
+        if (routes.length === 0) {
+          container.innerHTML =
+            '<p class="text-muted">No se encontraron rutas disponibles</p>';
+          return;
+        }
+
+        routes.forEach((route) => {
+          const routeElement = document.createElement("div");
+          routeElement.className = "route-card";
+          routeElement.onclick = () => selectBusRoute(route);
+
+          routeElement.innerHTML = `
+          <div class="route-header">
+            <span class="route-price">$${route.price}</span>
+            <span class="text-muted">${route.company}</span>
+          </div>
+          <div class="route-info">
+            <div>
+              <div class="route-time">${route.departure}</div>
+              <div class="text-muted">${route.origin}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-muted">${route.duration}</div>
+              <i class="fas fa-arrow-right text-muted"></i>
+            </div>
+            <div class="text-right">
+              <div class="route-time">${route.arrival}</div>
+              <div class="text-muted">${route.destination}</div>
+            </div>
+          </div>
+          <div class="route-features">
+            ${route.features
+              .map((feature) => `<span class="feature-tag">${feature}</span>`)
+              .join("")}
+          </div>
+        `;
+
+          container.appendChild(routeElement);
+        });
+      }
+
+      function selectBusRoute(route) {
+        currentBooking = {
+          type: "bus",
+          route: route,
+          price: route.price,
+        };
+
+        document.getElementById(
+          "seat-selection-info"
+        ).textContent = `${route.origin} → ${route.destination} - ${route.departure}`;
+
+        goTo("seat-selection");
+        initializeSeatGrid();
+      }
+
+      function loadTours() {
+        const tours = utils.getTours();
+        const container = document.getElementById("tours-list");
+        container.innerHTML = "";
+
+        tours.forEach((tour) => {
+          const tourElement = document.createElement("div");
+          tourElement.className = "route-card";
+          tourElement.onclick = () => selectTour(tour);
+
+          tourElement.innerHTML = `
+          <div class="route-header">
+            <span class="route-price">$${tour.price}</span>
+            <span class="text-muted">${tour.duration}</span>
+          </div>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <img src="${tour.image}" alt="${
+            tour.name
+          }" style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px;">
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 0.5rem 0;">${tour.name}</h4>
+              <p class="text-muted" style="margin: 0 0 0.5rem 0; font-size: 0.875rem;">${
+                tour.description
+              }</p>
+              <div class="route-features">
+                ${tour.features
+                  .map(
+                    (feature) => `<span class="feature-tag">${feature}</span>`
+                  )
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        `;
+
+          container.appendChild(tourElement);
+        });
+      }
+
+      function selectTour(tour) {
+        currentBooking = {
+          type: "tour",
+          tour: tour,
+          price: tour.price,
+        };
+
+        document.getElementById("seat-selection-info").textContent = tour.name;
+        goTo("seat-selection");
+        initializeSeatGrid();
+      }
+
+      function loadBusRentals() {
+        const rentals = utils.getBusRentalOptions();
+        const container = document.getElementById("bus-rental-list");
+        container.innerHTML = "";
+
+        rentals.forEach((rental) => {
+          const rentalElement = document.createElement("div");
+          rentalElement.className = "route-card";
+          rentalElement.onclick = () => selectBusRental(rental);
+
+          rentalElement.innerHTML = `
+          <div class="route-header">
+            <span class="route-price">$${rental.price}</span>
+            <span class="text-muted">${rental.capacity} pasajeros</span>
+          </div>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <img src="${rental.image}" alt="${
+            rental.name
+          }" style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px;">
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 0.5rem 0;">${rental.name}</h4>
+              <p class="text-muted" style="margin: 0 0 0.5rem 0; font-size: 0.875rem;">${
+                rental.description
+              }</p>
+              <div class="route-features">
+                ${rental.features
+                  .map(
+                    (feature) => `<span class="feature-tag">${feature}</span>`
+                  )
+                  .join("")}
+              </div>
+            </div>
+          </div>
+        `;
+
+          container.appendChild(rentalElement);
+        });
+      }
+
+      function selectBusRental(rental) {
+        currentBooking = {
+          type: "rental",
+          rental: rental,
+          price: rental.price,
+          totalPrice: rental.price, // Set totalPrice directly since it's the full bus
+        };
+
+        // Skip seat selection and go directly to payment
+        document.getElementById("seat-selection-info").textContent =
+          rental.name;
+        goTo("payment");
+      }
+
+      function initializeSeatGrid() {
+        const seatGrid = document.getElementById("seat-grid");
+        seatGrid.innerHTML = "";
+
+        const totalSeats =
+          currentBooking.type === "rental"
+            ? currentBooking.rental.capacity
+            : 50;
+        const seats = utils.generateSeatGrid(totalSeats, []);
+
+        seats.forEach((seat) => {
+          const seatElement = document.createElement("div");
+          seatElement.className = `seat ${
+            seat.occupied ? "occupied" : "available"
+          }`;
+          seatElement.textContent = seat.number;
+
+          if (!seat.occupied) {
+            seatElement.onclick = () => toggleSeat(seat.number);
+          }
+
+          seatGrid.appendChild(seatElement);
+        });
+
+        updateSeatSelection();
+      }
+
+      function toggleSeat(seatNumber) {
+        const index = selectedSeats.indexOf(seatNumber);
+
+        if (index > -1) {
+          selectedSeats.splice(index, 1);
+        } else {
+          selectedSeats.push(seatNumber);
+        }
+
+        updateSeatSelection();
+      }
+
+      function updateSeatSelection() {
+        // Update seat visual state
+        document.querySelectorAll(".seat").forEach((seatElement) => {
+          const seatNumber = parseInt(seatElement.textContent);
+          seatElement.classList.remove("selected");
+
+          if (selectedSeats.includes(seatNumber)) {
+            seatElement.classList.add("selected");
+          }
+        });
+
+        // Update counters
+        document.getElementById("selected-seats-count").textContent =
+          selectedSeats.length;
+        const totalPrice = selectedSeats.length * currentBooking.price;
+        document.getElementById("seat-total-price").textContent =
+          utils.formatPrice(totalPrice);
+      }
+
+      function proceedToPayment() {
+        if (currentBooking.type !== "rental" && selectedSeats.length === 0) {
+          utils.showNotification("Selecciona al menos un asiento", "warning");
+          return;
+        }
+
+        if (currentBooking.type !== "rental") {
+          currentBooking.selectedSeats = selectedSeats;
+          currentBooking.totalPrice =
+            selectedSeats.length * currentBooking.price;
+        }
+
+        goTo("payment");
+      }
+
+      function selectPaymentMethod(method) {
+        selectedPaymentMethod = method;
+
+        // Update visual selection
+        document.querySelectorAll(".payment-option").forEach((option) => {
+          option.classList.remove("selected");
+        });
+        event.currentTarget.classList.add("selected");
+
+        // Show payment form
+        const form = document.getElementById("payment-form");
+        const label = document.getElementById("payment-label");
+        const input = document.getElementById("payment-input");
+
+        form.classList.remove("d-none");
+
+        switch (method) {
+          case "card":
+            label.textContent = "Número de Tarjeta";
+            input.placeholder = "1234 5678 9012 3456";
+            break;
+          case "paypal":
+            label.textContent = "Correo de PayPal";
+            input.placeholder = "usuario@paypal.com";
+            break;
+          case "transfer":
+            label.textContent = "Número de Cuenta";
+            input.placeholder = "Número de cuenta bancaria";
+            break;
+        }
+      }
+
+      function processPayment() {
+        const paymentData = document.getElementById("payment-input").value;
+
+        if (!paymentData) {
+          utils.showNotification("Ingresa los datos de pago", "warning");
+          return;
+        }
+
+        const loading = document.getElementById("payment-loading");
+        loading.classList.remove("d-none");
+
+        utils
+          .simulatePayment({
+            method: selectedPaymentMethod,
+            data: paymentData,
+            amount: currentBooking.totalPrice,
+          })
+          .then((result) => {
+            loading.classList.add("d-none");
+
+            if (result.success) {
+              // Create reservation
+              const reservation = utils.createReservation({
+                ...currentBooking,
+                paymentMethod: selectedPaymentMethod,
+                transactionId: result.transactionId,
+                // For rentals, don't include selectedSeats
+                selectedSeats:
+                  currentBooking.type === "rental"
+                    ? undefined
+                    : currentBooking.selectedSeats,
+              });
+
+              utils.showNotification(
+                "Reserva confirmada exitosamente",
+                "success"
+              );
+
+              // Clear booking data
+              currentBooking = null;
+              selectedSeats = [];
+              selectedPaymentMethod = null;
+
+              // Go back to tickets
+              goTo("tickets");
+              loadUserTickets();
+            } else {
+              utils.showNotification(result.message, "danger");
+            }
+          });
+      }
+
+      // ... (previous code remains unchanged until selectBusRental function)
+
+      function selectBusRental(rental) {
+        currentBooking = {
+          type: "rental",
+          rental: rental,
+          price: rental.price,
+          totalPrice: rental.price, // Set totalPrice directly since it's the full bus
+        };
+
+        // Skip seat selection and go directly to payment
+        document.getElementById("seat-selection-info").textContent =
+          rental.name;
+        goTo("terminos-alquiler");
+      }
+
+      // Modified proceedToPayment to handle rentals differently
+      function proceedToPayment() {
+        if (currentBooking.type !== "rental" && selectedSeats.length === 0) {
+          utils.showNotification("Selecciona al menos un asiento", "warning");
+          return;
+        }
+
+        if (currentBooking.type !== "rental") {
+          currentBooking.selectedSeats = selectedSeats;
+          currentBooking.totalPrice =
+            selectedSeats.length * currentBooking.price;
+        }
+
+        goTo("payment");
+      }
+
+      // Modified processPayment to handle rentals
+      function processPayment() {
+        const paymentData = document.getElementById("payment-input").value;
+
+        if (!paymentData) {
+          utils.showNotification("Ingresa los datos de pago", "warning");
+          return;
+        }
+
+        const loading = document.getElementById("payment-loading");
+        loading.classList.remove("d-none");
+
+        utils
+          .simulatePayment({
+            method: selectedPaymentMethod,
+            data: paymentData,
+            amount: currentBooking.totalPrice,
+          })
+          .then((result) => {
+            loading.classList.add("d-none");
+
+            if (result.success) {
+              // Create reservation
+              const reservation = utils.createReservation({
+                ...currentBooking,
+                paymentMethod: selectedPaymentMethod,
+                transactionId: result.transactionId,
+                // For rentals, don't include selectedSeats
+                selectedSeats:
+                  currentBooking.type === "rental"
+                    ? undefined
+                    : currentBooking.selectedSeats,
+              });
+
+              utils.showNotification(
+                "Reserva confirmada exitosamente",
+                "success"
+              );
+
+              // Clear booking data
+              currentBooking = null;
+              selectedSeats = [];
+              selectedPaymentMethod = null;
+
+              // Go back to tickets
+              goTo("tickets");
+              loadUserTickets();
+            } else {
+              utils.showNotification(result.message, "danger");
+            }
+          });
+      }
+
+      // Modified loadUserTickets to handle rental display
+      function loadUserTickets() {
+        const tickets = utils.getUserReservations();
+        const container = document.getElementById("my-tickets-list");
+        container.innerHTML = "";
+
+        if (tickets.length === 0) {
+          container.innerHTML = `
+      <div class="text-center">
+        <i class="fas fa-ticket-alt" style="font-size: 3rem; color: var(--text-light); margin-bottom: 1rem;"></i>
+        <p class="text-muted">No tienes tickets activos</p>
+        <button class="btn btn-primary" onclick="switchTab('buses')">
+          <i class="fas fa-bus"></i> Reservar Ahora
+        </button>
+      </div>
+    `;
+          return;
+        }
+
+        tickets.forEach((ticket) => {
+          const ticketElement = document.createElement("div");
+          ticketElement.className = "route-card";
+
+          const isBus = ticket.type === "bus";
+          const isRental = ticket.type === "rental";
+          const icon = isBus
+            ? "fas fa-bus"
+            : ticket.type === "tour"
+            ? "fas fa-map-marked-alt"
+            : "fas fa-truck";
+          const title = isBus
+            ? `${ticket.route.origin} → ${ticket.route.destination}`
+            : ticket.type === "tour"
+            ? ticket.tour.name
+            : ticket.rental.name;
+
+          ticketElement.innerHTML = `
+      <div class="route-header">
+        <div class="d-flex align-center gap-1">
+          <i class="${icon}" style="color: var(--primary);"></i>
+          <span style="font-weight: 600;">${ticket.id}</span>
+        </div>
+        <span class="feature-tag" style="background: var(--success); color: white;">${
+          ticket.status
+        }</span>
+      </div>
+      <div class="route-info">
+        <div>
+          <div class="route-time">${title}</div>
+          <div class="text-muted">${utils.formatDate(ticket.createdAt)}</div>
+        </div>
+        <div class="text-right">
+          <div class="route-price">$${ticket.totalPrice || ticket.price}</div>
+          <div class="text-muted">${
+            isRental
+              ? "Bus completo"
+              : `${ticket.selectedSeats?.length || 0} asientos`
+          }</div>
+        </div>
+      </div>
+    `;
+
+          container.appendChild(ticketElement);
+        });
+      }
+
+      function toggleNotifications() {
+        utils.showNotification(
+          "Funcionalidad de notificaciones próximamente",
+          "info"
+        );
+      }
+
+      function editProfile() {
+        utils.showNotification("Funcionalidad de edición próximamente", "info");
+      }
+    </script>
+  </body>
+</html>
