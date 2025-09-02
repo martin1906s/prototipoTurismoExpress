@@ -719,24 +719,6 @@
           </div>
           <div id="alquiler-bus-list"></div>
         </div>
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Detalles del Bus</h3>
-          </div>
-          <div>
-            <img
-              src="https://thumbs.dreamstime.com/b/interior-de-lujo-del-autob%C3%BAs-con-los-asientos-c%C3%B3modos-124085134.jpg"
-              style="width: 100%; border-radius: 8px; margin-bottom: 8px;" />
-            <p class="text-muted">Disfruta de un viaje cómodo en nuestro bus de lujo con aire acondicionado, WiFi,
-              asientos reclinables y más. ¡La mejor forma de explorar Ecuador!</p>
-            <ul style="margin: 0; padding-left: 18px;">
-              <li><i class="fas fa-wind"></i> Aire Acondicionado</li>
-              <li><i class="fas fa-wifi"></i> WiFi Gratuito</li>
-              <li><i class="fas fa-tv"></i> TV a Bordo</li>
-              <li><i class="fas fa-restroom"></i> Baño</li>
-            </ul>
-          </div>
-        </div>
       </section>
 
       <!-- Alquiler: punto de entrega (después de elegir el bus) -->
@@ -1634,7 +1616,7 @@
         pisos: 2,
         capacity: 54,
         features: ["WiFi", "A/C", "Baño", "TV"],
-        image: "https://i.imgur.com/59B0j8r.jpeg",
+        image: "https://www.transportur.com/wp-content/uploads/2018/08/Hino-21-1-533x400.jpg",
         price: 450
       },
       {
@@ -1646,7 +1628,7 @@
         pisos: 1,
         capacity: 45,
         features: ["A/C", "Baño"],
-        image: "https://i.imgur.com/3jP0d2m.jpeg",
+        image: "https://www.transportur.com/wp-content/uploads/2018/08/Hino-31-533x400.jpg",
         price: 380
       },
       {
@@ -1658,7 +1640,7 @@
         pisos: 1,
         capacity: 30,
         features: ["A/C"],
-        image: "https://i.imgur.com/1wQyWfP.jpeg",
+        image: "https://www.transportur.com/wp-content/uploads/2016/08/Hino-Moncayo1-533x400.jpg",
         price: 300
       }
     ];
@@ -2026,7 +2008,8 @@
             selectedSeats: lastTour.asientos || [],
             tour: { name: lastTour.destino },
             createdAt: new Date().toISOString(),
-            status: 'Confirmado'
+            status: 'Confirmado',
+            payload: lastTour
           });
         }
       } catch (e) {}
@@ -2039,7 +2022,8 @@
             price: 0,
             rental: { name: `${lastBus.marca} ${lastBus.modelo}` },
             createdAt: new Date().toISOString(),
-            status: 'Confirmado'
+            status: 'Confirmado',
+            payload: lastBus
           });
         }
       } catch (e) {}
@@ -2101,6 +2085,19 @@
       </div>
     `;
 
+        // Abrir QR al hacer clic
+        ticketElement.onclick = () => {
+          try {
+            if (ticket.type === 'tour') {
+              if (ticket.payload) localStorage.setItem('last-tour', JSON.stringify(ticket.payload));
+              openLastTourQR();
+            } else if (ticket.type === 'rental') {
+              if (ticket.payload) localStorage.setItem('last-bus', JSON.stringify(ticket.payload));
+              openLastBusQR();
+            }
+          } catch (e) {}
+        };
+
         container.appendChild(ticketElement);
       });
     }
@@ -2139,8 +2136,8 @@
             <div class="carousel">
               <div class="carousel-slides" id="carousel-${p.id}${suf}">${p.id === 'quilotoa' ? `
                 <div class="carousel-slide"><img src="https://www.camepe.com/wp-content/uploads/2021/04/quilotoa-3.jpg" alt="${p.nombre} 1"></div>
-                <div class="carousel-slide"><img src="https://www.latintrails.com/wp-content/uploads/2021/12/Quilotoa.jpg" alt="${p.nombre} 2"></div>
-                <div class="carousel-slide"><img src="https://ecuadoralmundo.com/wp-content/uploads/2023/05/quilotoa-ecuador.jpg" alt="${p.nombre} 3"></div>` : ''}${p.id === 'banos' ? `
+                <div class="carousel-slide"><img src="https://ame.gob.ec/wp-content/uploads/2025/05/WhatsApp-Image-2025-05-01-at-15.52.42.jpeg" alt="${p.nombre} 2"></div>
+                <div class="carousel-slide"><img src="https://www.latintrails.com/wp-content/uploads/2021/12/Quilotoa.jpg" alt="${p.nombre} 3"></div>` : ''}${p.id === 'banos' ? `
                 <div class="carousel-slide"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROE4qmZDoGWT3uvtuIHU4Sz8alRgBgFwe2ZQ&s" alt="${p.nombre} 1"></div>
                 <div class="carousel-slide"><img src="https://repositorio.ame.gob.ec/wp-content/uploads/2021/03/WhatsApp-Image-2021-03-25-at-15.54.27.jpeg" alt="${p.nombre} 2"></div>
                 <div class="carousel-slide"><img src="https://www.ivagatoursbanios.com/images/turismo-bans.webp" alt="${p.nombre} 3"></div>` : ''}${p.id === 'mitad' ? `
@@ -2201,7 +2198,6 @@
     function selectPaquete(id, nombre, precio) {
       try {
         localStorage.setItem("selected-paquete", JSON.stringify({ id, nombre, precio }));
-
 
 
 
@@ -2634,8 +2630,8 @@
         const imgs = id === "quilotoa"
           ? [
               "https://www.camepe.com/wp-content/uploads/2021/04/quilotoa-3.jpg",
+              "https://ame.gob.ec/wp-content/uploads/2025/05/WhatsApp-Image-2025-05-01-at-15.52.42.jpeg",
               "https://www.latintrails.com/wp-content/uploads/2021/12/Quilotoa.jpg",
-              "https://ecuadoralmundo.com/wp-content/uploads/2023/05/quilotoa-ecuador.jpg",
             ]
           : id === "banos"
           ? [
