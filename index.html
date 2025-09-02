@@ -149,8 +149,6 @@
     /* Content */
     .content {
       padding: 1rem;
-      /* Espacio adicional para que los botones no queden debajo de la barra inferior */
-      padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     }
 
     .screen {
@@ -1210,29 +1208,18 @@
       </section>
     </main>
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-      <button class="nav-item active" onclick="switchTab('buses')">
-        <i class="fas fa-bus"></i>
-        <span>Buses</span>
-      </button>
-      <button class="nav-item" onclick="switchTab('tours')">
-        <i class="fas fa-map-marked-alt"></i>
-        <span>Tours</span>
-      </button>
-      <button class="nav-item" onclick="switchTab('rental')">
-        <i class="fas fa-truck"></i>
-        <span>Alquiler</span>
-      </button>
-      <button class="nav-item" onclick="switchTab('tickets')">
-        <i class="fas fa-ticket-alt"></i>
-        <span>Tickets</span>
-      </button>
-    </nav>
+    
   </div>
 
   
   <script>
+    function formatDateLocal(iso) {
+      try {
+        const d = iso ? new Date(iso) : new Date();
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleString();
+      } catch (e) { return ''; }
+    }
     function openLastBusQR() {
       try {
         const data = JSON.parse(localStorage.getItem('last-bus') || '{}');
@@ -1409,8 +1396,22 @@
       document
         .querySelectorAll(".screen")
         .forEach((screen) => screen.classList.remove("active"));
-      const targetScreenForTab = tabName === "buses" ? "inicio" : tabName;
+      const targetScreenForTab = tabName === "buses" ? "inicio" : (tabName === "rental" ? "alquiler" : tabName);
+      console.log('[switchTab] tab:', tabName, '-> screen:', targetScreenForTab);
       document.getElementById(targetScreenForTab).classList.add("active");
+      // Cargar contenido según pestaña
+      try {
+        if (targetScreenForTab === 'tours') {
+          console.log('[switchTab] loading tours…');
+          loadTours();
+        } else if (targetScreenForTab === 'alquiler') {
+          console.log('[switchTab] loading alquiler buses…');
+          loadAlquilerBusOptions();
+        } else if (targetScreenForTab === 'tickets') {
+          console.log('[switchTab] loading tickets…');
+          loadUserTickets();
+        }
+      } catch (e) { console.error('[switchTab] error loading content:', e); }
     }
 
     function goTo(screenName) {
@@ -1537,40 +1538,9 @@
     }
 
     function loadTours() {
-      const tours = utils.getTours();
-      const container = document.getElementById("tours-list");
-      container.innerHTML = "";
-
-      tours.forEach((tour) => {
-        const tourElement = document.createElement("div");
-        tourElement.className = "route-card";
-        tourElement.onclick = () => selectTour(tour);
-
-        tourElement.innerHTML = `
-          <div class="route-header">
-            <span class="route-price">$${tour.price}</span>
-            <span class="text-muted">${tour.duration}</span>
-          </div>
-          <div style="display: flex; gap: 1rem; align-items: center;">
-            <img src="${tour.image}" alt="${tour.name
-          }" style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px;">
-            <div style="flex: 1;">
-              <h4 style="margin: 0 0 0.5rem 0;">${tour.name}</h4>
-              <p class="text-muted" style="margin: 0 0 0.5rem 0; font-size: 0.875rem;">${tour.description
-          }</p>
-              <div class="route-features">
-                ${tour.features
-            .map(
-              (feature) => `<span class="feature-tag">${feature}</span>`
-            )
-            .join("")}
-              </div>
-            </div>
-          </div>
-        `;
-
-        container.appendChild(tourElement);
-      });
+      console.log('[loadTours] init');
+      // Reusar el mismo render de Paquetes para listar Tours
+      renderPaquetesListInto('tours-list', 'tours');
     }
 
     function selectTour(tour) {
@@ -1586,9 +1556,12 @@
     }
 
     function loadBusRentals() {
-      const rentals = utils.getBusRentalOptions();
+      console.log('[loadBusRentals] init');
+      let rentals = [];
+      try { rentals = utils.getBusRentalOptions(); } catch (e) { console.warn('[loadBusRentals] utils.getBusRentalOptions failed:', e); rentals = []; }
       const container = document.getElementById("bus-rental-list");
       container.innerHTML = "";
+      console.log('[loadBusRentals] count:', rentals.length);
 
       rentals.forEach((rental) => {
         const rentalElement = document.createElement("div");
@@ -1716,7 +1689,17 @@
             </div>
           </div>
           <div class="d-flex gap-2 mt-1">
+            <button class="btn btn-secondary" onclick="viewBusDetails('${bus.placa.replace(/'/g, "&apos;")}')"><i class=\"fas fa-eye\"></i> Detalles</button>
             <button class="btn btn-primary btn-full" onclick='selectAlquilerBus(${JSON.stringify(bus).replace(/'/g, "&apos;")})'>Seleccionar</button>
+          </div>
+          <div id="bus-details-${bus.placa}" class="card" style="margin-top:8px; display:none; padding:12px;">
+            <p style=\"margin:.25rem 0;\"><strong>Placa:</strong> ${bus.placa}</p>
+            <p style=\"margin:.25rem 0;\"><strong>Marca:</strong> ${bus.marca}</p>
+            <p style=\"margin:.25rem 0;\"><strong>Modelo:</strong> ${bus.modelo}</p>
+            <p style=\"margin:.25rem 0;\"><strong>Año:</strong> ${bus.anio}</p>
+            <p style=\"margin:.25rem 0;\"><strong>Pisos:</strong> ${bus.pisos}</p>
+            <p style=\"margin:.25rem 0;\"><strong>Capacidad:</strong> ${bus.capacity}</p>
+            <p style=\"margin:.25rem 0;\"><strong>Características:</strong> ${bus.features.join(', ')}</p>
           </div>
         `;
         container.appendChild(el);
@@ -1763,6 +1746,12 @@
         localStorage.setItem('last-bus', JSON.stringify(data));
       } catch (e) {}
       goTo('terminos-alquiler');
+    }
+
+    function viewBusDetails(placa) {
+      const box = document.getElementById(`bus-details-${placa}`);
+      if (!box) return;
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
     }
 
     function initializeSeatGrid() {
@@ -2022,9 +2011,41 @@
 
     // Modified loadUserTickets to handle rental display
     function loadUserTickets() {
-      const tickets = utils.getUserReservations();
+      console.log('[loadUserTickets] init');
+      let tickets = [];
+      try {
+        tickets = typeof utils?.getUserReservations === 'function' ? utils.getUserReservations() : [];
+      } catch (e) { console.warn('[loadUserTickets] utils.getUserReservations failed:', e); tickets = []; }
+      try {
+        const lastTour = JSON.parse(localStorage.getItem('last-tour') || 'null');
+        if (lastTour) {
+          tickets.push({
+            id: 'TOUR-' + (Date.now() - 2000),
+            type: 'tour',
+            totalPrice: parseFloat(lastTour.precio || '0'),
+            selectedSeats: lastTour.asientos || [],
+            tour: { name: lastTour.destino },
+            createdAt: new Date().toISOString(),
+            status: 'Confirmado'
+          });
+        }
+      } catch (e) {}
+      try {
+        const lastBus = JSON.parse(localStorage.getItem('last-bus') || 'null');
+        if (lastBus && lastBus.entrega) {
+          tickets.push({
+            id: 'BUS-' + (Date.now() - 1000),
+            type: 'rental',
+            price: 0,
+            rental: { name: `${lastBus.marca} ${lastBus.modelo}` },
+            createdAt: new Date().toISOString(),
+            status: 'Confirmado'
+          });
+        }
+      } catch (e) {}
       const container = document.getElementById("my-tickets-list");
       container.innerHTML = "";
+      console.log('[loadUserTickets] total tickets:', tickets.length);
 
       if (tickets.length === 0) {
         container.innerHTML = `
@@ -2068,7 +2089,7 @@
       <div class="route-info">
         <div>
           <div class="route-time">${title}</div>
-          <div class="text-muted">${utils.formatDate(ticket.createdAt)}</div>
+          <div class="text-muted">${formatDateLocal(ticket.createdAt)}</div>
         </div>
         <div class="text-right">
           <div class="route-price">$${ticket.totalPrice || ticket.price}</div>
@@ -2096,55 +2117,57 @@
     }
 
     // ===== Integración de lógica de indexx (Home/Paquetes/QR) =====
-    function fetchPaquetes() {
-      const loader = document.getElementById("paquetes-loader");
-      const list = document.getElementById("paquetes-list");
-      if (!loader || !list) return;
-      loader.style.display = "block";
-      list.innerHTML = "";
-      const paquetes = [
+    function getPaquetesData() {
+      return [
         { id: "quilotoa", nombre: "Laguna Quilotoa", precio: 120, descripcion: "Explora la belleza de la laguna de Quilotoa con caminatas y paisajes únicos." },
         { id: "banos", nombre: "Baños de Agua Santa", precio: 150, descripcion: "Disfruta de cascadas, aventura y aguas termales en Baños." },
         { id: "mitad", nombre: "Mitad del Mundo", precio: 80, descripcion: "Visita el monumento y vive la experiencia de estar en dos hemisferios." },
       ];
+    }
+
+    function renderPaquetesListInto(containerId, idSuffix) {
+      const list = document.getElementById(containerId);
+      if (!list) return;
+      list.innerHTML = "";
+      const paquetes = getPaquetesData();
       paquetes.forEach((p) => {
         const div = document.createElement("div");
         div.className = "card";
+        const suf = idSuffix ? `-${idSuffix}` : "";
         div.innerHTML = `
-            <h4 style=\"margin:0 0 6px 0; color: var(--primary);\">${p.nombre}</h4>
-            <div class=\"carousel\">
-              <div class=\"carousel-slides\" id=\"carousel-${p.id}\">${p.id === 'quilotoa' ? `
-                <div class=\"carousel-slide\"><img src=\"https://www.camepe.com/wp-content/uploads/2021/04/quilotoa-3.jpg\" alt=\"${p.nombre} 1\"></div>
-                <div class=\"carousel-slide\"><img src=\"https://www.latintrails.com/wp-content/uploads/2021/12/Quilotoa.jpg\" alt=\"${p.nombre} 2\"></div>
-                <div class=\"carousel-slide\"><img src=\"https://ecuadoralmundo.com/wp-content/uploads/2023/05/quilotoa-ecuador.jpg\" alt=\"${p.nombre} 3\"></div>` : ''}${p.id === 'banos' ? `
-                <div class=\"carousel-slide\"><img src=\"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROE4qmZDoGWT3uvtuIHU4Sz8alRgBgFwe2ZQ&s\" alt=\"${p.nombre} 1\"></div>
-                <div class=\"carousel-slide\"><img src=\"https://repositorio.ame.gob.ec/wp-content/uploads/2021/03/WhatsApp-Image-2021-03-25-at-15.54.27.jpeg\" alt=\"${p.nombre} 2\"></div>
-                <div class=\"carousel-slide\"><img src=\"https://www.ivagatoursbanios.com/images/turismo-bans.webp\" alt=\"${p.nombre} 3\"></div>` : ''}${p.id === 'mitad' ? `
-                <div class=\"carousel-slide\"><img src=\"https://cloudfront-us-east-1.images.arcpublishing.com/infobae/QTWJJLKURRHIDFR7UYQFFNHNRQ.jpeg\" alt=\"${p.nombre} 1\"></div>
-                <div class=\"carousel-slide\"><img src=\"https://ecuadoralmundo.com/wp-content/uploads/2023/05/mitad-del-mundo-2.webp\" alt=\"${p.nombre} 2\"></div>
-                <div class=\"carousel-slide\"><img src=\"https://museosdmqjennifermeza.wordpress.com/wp-content/uploads/2015/05/images-61.jpeg\" alt=\"${p.nombre} 3\"></div>` : ''}
+            <h4 style="margin:0 0 6px 0; color: var(--primary);">${p.nombre}</h4>
+            <div class="carousel">
+              <div class="carousel-slides" id="carousel-${p.id}${suf}">${p.id === 'quilotoa' ? `
+                <div class="carousel-slide"><img src="https://www.camepe.com/wp-content/uploads/2021/04/quilotoa-3.jpg" alt="${p.nombre} 1"></div>
+                <div class="carousel-slide"><img src="https://www.latintrails.com/wp-content/uploads/2021/12/Quilotoa.jpg" alt="${p.nombre} 2"></div>
+                <div class="carousel-slide"><img src="https://ecuadoralmundo.com/wp-content/uploads/2023/05/quilotoa-ecuador.jpg" alt="${p.nombre} 3"></div>` : ''}${p.id === 'banos' ? `
+                <div class="carousel-slide"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROE4qmZDoGWT3uvtuIHU4Sz8alRgBgFwe2ZQ&s" alt="${p.nombre} 1"></div>
+                <div class="carousel-slide"><img src="https://repositorio.ame.gob.ec/wp-content/uploads/2021/03/WhatsApp-Image-2021-03-25-at-15.54.27.jpeg" alt="${p.nombre} 2"></div>
+                <div class="carousel-slide"><img src="https://www.ivagatoursbanios.com/images/turismo-bans.webp" alt="${p.nombre} 3"></div>` : ''}${p.id === 'mitad' ? `
+                <div class="carousel-slide"><img src="https://cloudfront-us-east-1.images.arcpublishing.com/infobae/QTWJJLKURRHIDFR7UYQFFNHNRQ.jpeg" alt="${p.nombre} 1"></div>
+                <div class="carousel-slide"><img src="https://ecuadoralmundo.com/wp-content/uploads/2023/05/mitad-del-mundo-2.webp" alt="${p.nombre} 2"></div>
+                <div class="carousel-slide"><img src="https://museosdmqjennifermeza.wordpress.com/wp-content/uploads/2015/05/images-61.jpeg" alt="${p.nombre} 3"></div>` : ''}
               </div>
-              <button class=\"carousel-btn prev\" onclick=\"moveCarousel('prev', '${p.id}')\"><i class=\"fas fa-chevron-left\"></i></button>
-              <button class=\"carousel-btn next\" onclick=\"moveCarousel('next', '${p.id}')\"><i class=\"fas fa-chevron-right\"></i></button>
-              <div class=\"carousel-dots\" id=\"dots-${p.id}\"></div>
+              <button class="carousel-btn prev" onclick="moveCarousel('prev', '${p.id}${suf}')"><i class="fas fa-chevron-left"></i></button>
+              <button class="carousel-btn next" onclick="moveCarousel('next', '${p.id}${suf}')"><i class="fas fa-chevron-right"></i></button>
+              <div class="carousel-dots" id="dots-${p.id}${suf}"></div>
             </div>
-            <p class=\"text-muted\">${p.descripcion}</p>
-            <p class=\"route-price\">Precio: $${p.precio}</p>
-            <button class=\"btn btn-primary btn-full\" onclick=\"selectPaquete('${p.id}','${p.nombre}', ${p.precio})\">Seleccionar</button>
+            <p class="text-muted">${p.descripcion}</p>
+            <p class="route-price">Precio: $${p.precio}</p>
+            <button class="btn btn-primary btn-full" onclick="selectPaquete('${p.id}','${p.nombre}', ${p.precio})">Seleccionar</button>
           `;
         list.appendChild(div);
 
-        const slides = document.getElementById(`carousel-${p.id}`).children;
-        const dotsContainer = document.getElementById(`dots-${p.id}`);
+        const slides = document.getElementById(`carousel-${p.id}${suf}`).children;
+        const dotsContainer = document.getElementById(`dots-${p.id}${suf}`);
         for (let i = 0; i < slides.length; i++) {
           const dot = document.createElement('span');
           dot.className = 'carousel-dot';
-          dot.onclick = () => moveToSlide(i, p.id);
+          dot.onclick = () => moveToSlide(i, `${p.id}${suf}`);
           if (i === 0) dot.classList.add('active');
           dotsContainer.appendChild(dot);
         }
       });
-      loader.style.display = "none";
     }
 
     // Navegación del carrusel (paquetes)
@@ -2154,22 +2177,24 @@
       if (!container) return;
       const slides = container.children;
       const dots = document.getElementById(`dots-${paqueteId}`).children;
-      currentSlide[paqueteId] = currentSlide[paqueteId] || 0;
+      const cs = window.currentSlide || (window.currentSlide = {});
+      cs[paqueteId] = cs[paqueteId] || 0;
       if (direction === 'next') {
-        currentSlide[paqueteId] = (currentSlide[paqueteId] + 1) % slides.length;
+        cs[paqueteId] = (cs[paqueteId] + 1) % slides.length;
       } else {
-        currentSlide[paqueteId] = (currentSlide[paqueteId] - 1 + slides.length) % slides.length;
+        cs[paqueteId] = (cs[paqueteId] - 1 + slides.length) % slides.length;
       }
-      container.style.transform = `translateX(-${currentSlide[paqueteId] * 100}%)`;
-      Array.from(dots).forEach((dot, index) => dot.classList.toggle('active', index === currentSlide[paqueteId]));
+      container.style.transform = `translateX(-${cs[paqueteId] * 100}%)`;
+      Array.from(dots).forEach((dot, index) => dot.classList.toggle('active', index === cs[paqueteId]));
     }
 
     function moveToSlide(index, paqueteId) {
       const container = document.getElementById(`carousel-${paqueteId}`);
       if (!container) return;
       const dots = document.getElementById(`dots-${paqueteId}`).children;
-      currentSlide[paqueteId] = index;
-      container.style.transform = `translateX(-${currentSlide[paqueteId] * 100}%)`;
+      const cs = window.currentSlide || (window.currentSlide = {});
+      cs[paqueteId] = index;
+      container.style.transform = `translateX(-${cs[paqueteId] * 100}%)`;
       Array.from(dots).forEach((dot, i) => dot.classList.toggle('active', i === index));
     }
 
@@ -2637,7 +2662,7 @@
           dotsContainer.appendChild(dot);
         }
         // reset posición del carrusel de actividades
-        currentSlide["actividades"] = 0;
+        (window.currentSlide || (window.currentSlide = {}))["actividades"] = 0;
         slidesContainer.style.transform = "translateX(0)";
       }
       const list = document.getElementById("actividades-list");
@@ -3027,6 +3052,15 @@
       } catch (e) { }
       // Minimapa (opcional) si hay ruta
       
+    }
+
+    function fetchPaquetes() {
+      const loader = document.getElementById("paquetes-loader");
+      const list = document.getElementById("paquetes-list");
+      if (!loader || !list) return;
+      loader.style.display = "block";
+      renderPaquetesListInto('paquetes-list', 'paquetes');
+      loader.style.display = "none";
     }
   </script>
 </body>
