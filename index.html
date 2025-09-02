@@ -717,22 +717,9 @@
         <p class="back" onclick="goBack()">← Volver</p>
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Elige Punto de Entrega</h3>
+            <h3 class="card-title">Elige tu Bus</h3>
           </div>
-          <div>
-            <div class="route-card option"
-              onclick="selectOption(this, 'bus', 'Terminal Carcelén, Quito', 'terminos-alquiler')">
-              <i class="fas fa-bus"></i> <span>Terminal Carcelén, Quito</span>
-            </div>
-            <div class="route-card option"
-              onclick="selectOption(this, 'bus', 'Oficina TurismoExpress, Guayaquil', 'terminos-alquiler')">
-              <i class="fas fa-building"></i> <span>Oficina TurismoExpress, Guayaquil</span>
-            </div>
-            <div class="route-card option"
-              onclick="selectOption(this, 'bus', 'Terminal Quitumbe, Quito', 'terminos-alquiler')">
-              <i class="fas fa-warehouse"></i> <span>Terminal Quitumbe, Quito</span>
-            </div>
-          </div>
+          <div id="alquiler-bus-list"></div>
         </div>
         <div class="card">
           <div class="card-header">
@@ -750,6 +737,27 @@
               <li><i class="fas fa-tv"></i> TV a Bordo</li>
               <li><i class="fas fa-restroom"></i> Baño</li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Alquiler: punto de entrega (después de elegir el bus) -->
+      <section class="screen" id="alquiler-entrega">
+        <p class="back" onclick="goBack()">← Volver</p>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Elige Punto de Entrega</h3>
+          </div>
+          <div>
+            <div class="route-card option" onclick="selectEntregaForBus('Terminal Carcelén, Quito')">
+              <i class="fas fa-bus"></i> <span>Terminal Carcelén, Quito</span>
+            </div>
+            <div class="route-card option" onclick="selectEntregaForBus('Oficina TurismoExpress, Guayaquil')">
+              <i class="fas fa-building"></i> <span>Oficina TurismoExpress, Guayaquil</span>
+            </div>
+            <div class="route-card option" onclick="selectEntregaForBus('Terminal Quitumbe, Quito')">
+              <i class="fas fa-warehouse"></i> <span>Terminal Quitumbe, Quito</span>
+            </div>
           </div>
         </div>
       </section>
@@ -1423,6 +1431,9 @@
           fetchPaquetes();
         }
       }
+      if (screenName === "alquiler") {
+        loadAlquilerBusOptions();
+      }
     }
 
     function searchBusRoutes() {
@@ -1637,6 +1648,121 @@
         localStorage.setItem('last-bus', JSON.stringify(busInfo));
       } catch (e) {}
       goTo("terminos-alquiler");
+    }
+
+    // Listado de buses para Alquiler (pantalla 'alquiler')
+    const BUS_OPTIONS = [
+      {
+        name: "Bus Ejecutivo 1",
+        placa: "TEX-1234",
+        marca: "Mercedes",
+        modelo: "Marcopolo G7",
+        anio: 2020,
+        pisos: 2,
+        capacity: 54,
+        features: ["WiFi", "A/C", "Baño", "TV"],
+        image: "https://i.imgur.com/59B0j8r.jpeg",
+        price: 450
+      },
+      {
+        name: "Bus Turístico 2",
+        placa: "TEX-5678",
+        marca: "Scania",
+        modelo: "Irizar i6",
+        anio: 2019,
+        pisos: 1,
+        capacity: 45,
+        features: ["A/C", "Baño"],
+        image: "https://i.imgur.com/3jP0d2m.jpeg",
+        price: 380
+      },
+      {
+        name: "MiniBus 3",
+        placa: "TEX-9012",
+        marca: "Hyundai",
+        modelo: "County",
+        anio: 2021,
+        pisos: 1,
+        capacity: 30,
+        features: ["A/C"],
+        image: "https://i.imgur.com/1wQyWfP.jpeg",
+        price: 300
+      }
+    ];
+
+    function loadAlquilerBusOptions() {
+      const container = document.getElementById('alquiler-bus-list');
+      if (!container) return;
+      container.innerHTML = '';
+      BUS_OPTIONS.forEach((bus) => {
+        const el = document.createElement('div');
+        el.className = 'route-card';
+        el.innerHTML = `
+          <div class="route-header">
+            <span class="route-price">$${bus.price}</span>
+            <span class="text-muted">${bus.marca} ${bus.modelo}</span>
+          </div>
+          <div style="display:flex; gap:1rem; align-items:center;">
+            <img src="${bus.image}" alt="${bus.name}" style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px;" />
+            <div style="flex:1;">
+              <h4 style="margin:0 0 .25rem 0;">${bus.name}</h4>
+              <p class="text-muted" style="margin:.25rem 0; font-size:.875rem;">
+                Placa: <strong>${bus.placa}</strong> · Año: <strong>${bus.anio}</strong>
+              </p>
+              <p class="text-muted" style="margin:.25rem 0; font-size:.875rem;">
+                Pisos: <strong>${bus.pisos}</strong> · Capacidad: <strong>${bus.capacity}</strong>
+              </p>
+              <div class="route-features">${bus.features.map(f=>`<span class="feature-tag">${f}</span>`).join('')}</div>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-1">
+            <button class="btn btn-primary btn-full" onclick='selectAlquilerBus(${JSON.stringify(bus).replace(/'/g, "&apos;")})'>Seleccionar</button>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+    }
+
+    function selectAlquilerBus(bus) {
+      // Mapear a estructura usada por selectBusRental
+      const rental = {
+        name: bus.name,
+        placa: bus.placa,
+        marca: bus.marca,
+        modelo: bus.modelo,
+        anio: bus.anio,
+        pisos: bus.pisos,
+        capacity: bus.capacity,
+        features: bus.features,
+        price: bus.price,
+        image: bus.image,
+        description: `${bus.marca} ${bus.modelo} · ${bus.capacity} asientos · ${bus.pisos} pisos`
+      };
+      // Persistir selección para detalles/QR
+      try {
+        const busInfo = {
+          entrega: '',
+          placa: rental.placa,
+          marca: rental.marca,
+          modelo: rental.modelo,
+          anio: rental.anio,
+          pisos: rental.pisos,
+          asientos: rental.capacity,
+          detalles: (rental.features || []).join(', ')
+        };
+        localStorage.setItem('last-bus', JSON.stringify(busInfo));
+      } catch (e) {}
+      currentBooking = { type: 'rental', rental, price: rental.price, totalPrice: rental.price };
+      goTo('alquiler-entrega');
+    }
+
+    function selectEntregaForBus(entrega) {
+      try {
+        const data = JSON.parse(localStorage.getItem('last-bus') || '{}');
+        data.entrega = entrega;
+        localStorage.setItem('last-bus', JSON.stringify(data));
+      } catch (e) {}
+      goTo('terminos-alquiler');
     }
 
     function initializeSeatGrid() {
